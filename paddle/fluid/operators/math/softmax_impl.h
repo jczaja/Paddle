@@ -83,28 +83,38 @@ class SoftmaxFunctor<DeviceContext, float, true, enable_if_CPU<DeviceContext>> {
     // 2D data. Batch x C
     const int batch_size = in_dims[kBatchDim];
     const int num_classes = in_dims[kClassDim];
-    std::vector<float> entities(batch_size);
     auto blas = math::GetBlas<DeviceContext, float>(context);
     for (int n = 0; n < batch_size; ++n) {
-      entities[n] = in_data[n * num_classes];
-      for (int c = 1; c < num_classes; ++c) {
-        entities[n] = in_data[n * num_classes + c] > entities[n]
-                          ? in_data[n * num_classes + c]
-                          : entities[n];
+
+      auto maxval = in_data[n*num_classes];
+      const float* inptr = &in_data[n*num_classes];
+      #ifdef OPENMP_SIMD
+      #pragma omp simd reduction(max: maxval)
+      #endif
+      for (int c=1; c < num_classes; ++c) {
+        if (inptr[c] > maxval) {
+          maxval = inptr[c];
+        }
       }
+
       for (int c = 0; c < num_classes; ++c) {
         out_data[n * num_classes + c] =
-            in_data[n * num_classes + c] - entities[n];
+            in_data[n * num_classes + c] - maxval;
       }
     }
 
     blas.VEXP(num_classes * batch_size, out_data, out_data);
-    for (int n = 0; n < batch_size; ++n) {
-      entities[n] = out_data[n * num_classes];
-      for (int c = 1; c < num_classes; ++c) {
-        entities[n] += out_data[n * num_classes + c];
+
+    for (int n=0; n < batch_size; ++n) {
+      auto sum = out_data[n*num_classes]; 
+      float* tmpptr = &out_data[n*num_classes];
+      #ifdef OPENMP_SIMD
+      #pragma omp simd reduction(+: sum)
+      #endif
+      for (int c=1; c < num_classes; ++c) {
+        sum += tmpptr[c];
       }
-      blas.SCAL(num_classes, 1.0f / entities[n], &out_data[n * num_classes]);
+      blas.SCAL(num_classes, 1.0f / sum, &out_data[n * num_classes]);
     }
   }
 };

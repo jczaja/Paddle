@@ -153,6 +153,25 @@ if (WITH_MKLML AND MKLML_IOMP_LIB)
     set(CMAKE_CXX_CREATE_SHARED_LIBRARY_FORBIDDEN_FLAGS ${OPENMP_FLAGS})
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OPENMP_FLAGS}")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OPENMP_FLAGS}")
+    # Check if compiler does support OpenMP SIMD (OpenMP 4.0+)
+    set(OpenMP_SIMD_Test_Source
+    " int main()
+    {
+      const int asize = 8;
+      int a[asize] = {1,2,3,4,5,6,7,8};
+      int sum = a[0];
+    # pragma omp simd reduction(+:sum)
+      for (int i=1; i<asize; ++i) {
+        sum += a[i];
+      }
+      return 0;
+    }")
+    file(WRITE ${CMAKE_BINARY_DIR}/test_openmp.cpp "${OpenMP_SIMD_Test_Source}")
+    try_compile(COMPILE_SUCCEEDED ${CMAKE_BINARY_DIR} ${CMAKE_BINARY_DIR}/test_openmp.cpp COMPILE_DEFINITIONS "-fopenmp -Werror -Wunknown-pragmas")
+    if(COMPILE_SUCCEEDED)
+      add_definitions(-DOPENMP_SIMD)
+      message(STATUS "OpenMP simd optimizations enabled")
+    endif()
 endif()
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${SIMD_FLAG}")
