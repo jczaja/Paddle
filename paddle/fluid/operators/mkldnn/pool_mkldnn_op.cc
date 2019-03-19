@@ -111,7 +111,6 @@ class PoolMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
     std::vector<int> dst_tz = paddle::framework::vectorize2int(output->dims());
 
     auto input_format = input->format();
-    memory::format output_format{memory::format::format_undef};
 
     mkldnn::memory::data_type dt =
         paddle::framework::ToMKLDNNDataType(input->type());
@@ -177,6 +176,7 @@ class PoolMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
       }
 
       dev_ctx.SetBlob(key_pool_p, pool_p);
+      output->set_mkldnn_prim_desc(pool_pd->dst_primitive_desc());
     } else {
       // Primitives already exist
       auto pool_src_memory_p =
@@ -190,17 +190,14 @@ class PoolMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
       pool_src_memory_p->set_data_handle(to_void_cast<T>(input_data));
       pool_dst_memory_p->set_data_handle(output_data);
 
-      output_format = (memory::format)pool_dst_memory_p->get_primitive_desc()
-                          .desc()
-                          .data.format;
+      // pool_dst_memory_p is registerred in context so we can
+      // get its prim desc
+      output->set_mkldnn_prim_desc(pool_dst_memory_p->get_primitive_desc());
     }
 
     // push primitive to stream and wait until it's executed
     std::vector<mkldnn::primitive> pipeline{*pool_p};
     stream(stream::kind::eager).submit(pipeline).wait();
-    // pool_dst_memory_p is registerred in context so we can
-    // get its prim desc
-    output->set_mkldnn_prim_desc(pool_dst_memory_p->get_primitive_desc());
   }
 
  private:
