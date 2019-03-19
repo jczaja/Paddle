@@ -163,7 +163,7 @@ class SoftmaxMKLDNNKernel : public paddle::framework::OpKernel<T> {
     // have 2,3,4+ dims
     auto output_mem_pd = paddle::platform::create_prim_desc_from_dims(
         paddle::framework::vectorize2int(output->dims()),
-        mkldnn::memory::format::blocked);
+        paddle::platform::mkldnn_fmt(output->dims().size()));
     output->set_mkldnn_prim_desc(output_mem_pd);
 
     std::vector<primitive> pipeline{

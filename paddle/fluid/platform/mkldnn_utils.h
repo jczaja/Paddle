@@ -15,6 +15,7 @@ limitations under the License. */
 #pragma once
 #include <mkldnn.h>
 #include <string>
+#include <vector>
 
 namespace paddle {
 namespace platform {
@@ -63,6 +64,23 @@ inline mkldnn::memory::primitive_desc create_prim_desc_from_format(
   PADDLE_ENFORCE_NOT_NULL(dev_ctx, "Could not get valid device");
   auto& cpu_engine = dev_ctx->GetEngine();
   return mkldnn::memory::primitive_desc(md, cpu_engine);
+}
+
+inline mkldnn::memory::format mkldnn_fmt(int rank) {
+  switch (rank) {
+    case 5:
+      return mkldnn::memory::format::ncdhw;
+    case 4:
+      return mkldnn::memory::format::nchw;
+    case 3:
+      return mkldnn::memory::format::ncw;
+    case 2:
+      return mkldnn::memory::format::nc;
+    case 1:
+      return mkldnn::memory::format::x;
+    default:
+      return mkldnn::memory::format::blocked;
+  }
 }
 
 }  // namespace platform

@@ -91,8 +91,6 @@ class TransposeINT8MKLDNNOpKernel : public paddle::framework::OpKernel<T> {
     auto* input = ctx.Input<Tensor>("X");
     auto* output = ctx.Output<Tensor>("Out");
     output->ShareDataWith(*input);
-    output->set_layout(DataLayout::kMKLDNN);
-    output->set_format(input->format());
   }
 };
 
