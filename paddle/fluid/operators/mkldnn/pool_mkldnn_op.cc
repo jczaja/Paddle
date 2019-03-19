@@ -177,9 +177,6 @@ class PoolMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
       }
 
       dev_ctx.SetBlob(key_pool_p, pool_p);
-
-      output_format =
-          (memory::format)dst_memory->get_primitive_desc().desc().data.format;
     } else {
       // Primitives already exist
       auto pool_src_memory_p =
@@ -201,9 +198,9 @@ class PoolMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
     // push primitive to stream and wait until it's executed
     std::vector<mkldnn::primitive> pipeline{*pool_p};
     stream(stream::kind::eager).submit(pipeline).wait();
-
-    output->set_layout(DataLayout::kMKLDNN);
-    output->set_format(output_format);
+    // pool_dst_memory_p is registerred in context so we can
+    // get its prim desc
+    output->set_mkldnn_prim_desc(pool_dst_memory_p->get_primitive_desc());
   }
 
  private:
@@ -409,6 +406,7 @@ class PoolMKLDNNGradOpKernel : public paddle::framework::OpKernel<T> {
 
     in_x_grad->set_layout(DataLayout::kMKLDNN);
     in_x_grad->set_format(in_x_grad_format);
+//    in_x_grad->set_mkldnn_prim_desc(pool_dst_memory_p->get_primitive_desc());
   }  // Compute()
 };
 
