@@ -277,7 +277,6 @@ class PoolMKLDNNGradOpKernel : public paddle::framework::OpKernel<T> {
 
     const T* out_grad_data = out_grad->data<T>();
     T* in_x_grad_data = in_x_grad->mutable_data<T>(ctx.GetPlace());
-    memory::format in_x_grad_format{memory::format::format_undef};
 
     std::vector<int> diff_src_tz =
         paddle::framework::vectorize2int(in_x_grad->dims());
@@ -387,10 +386,6 @@ class PoolMKLDNNGradOpKernel : public paddle::framework::OpKernel<T> {
       }
     }
 
-    in_x_grad_format = (memory::format)diff_src_memory->get_primitive_desc()
-                           .desc()
-                           .data.format;
-
     // push primitive to stream and wait until it's executed
     std::vector<mkldnn::primitive> pipeline;
     if (is_diff_dst_reordered) {
@@ -398,10 +393,7 @@ class PoolMKLDNNGradOpKernel : public paddle::framework::OpKernel<T> {
     }
     pipeline.push_back(*pool_bwd_p);
     mkldnn::stream(mkldnn::stream::kind::eager).submit(pipeline).wait();
-
-    in_x_grad->set_layout(DataLayout::kMKLDNN);
-    in_x_grad->set_format(in_x_grad_format);
-//    in_x_grad->set_mkldnn_prim_desc(pool_dst_memory_p->get_primitive_desc());
+    in_x_grad->set_mkldnn_prim_desc(diff_src_memory->get_primitive_desc());
   }  // Compute()
 };
 
