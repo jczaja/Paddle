@@ -73,7 +73,7 @@ void TransformData(const OpKernelType &expected_kernel_type,
 
         auto out_mem_pd = paddle::platform::create_prim_desc_from_dims(
             paddle::framework::vectorize2int(out.dims()),
-            mkldnn_fmt(out.dims().size()));
+            mkldnn_fmt(out.dims().size()),paddle::framework::ToMKLDNNDataType(in.type()));
 
         out.set_mkldnn_prim_desc(out_mem_pd);
 #endif

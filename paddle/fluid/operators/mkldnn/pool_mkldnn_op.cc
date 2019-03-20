@@ -110,8 +110,6 @@ class PoolMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
     std::vector<int> src_tz = paddle::framework::vectorize2int(input->dims());
     std::vector<int> dst_tz = paddle::framework::vectorize2int(output->dims());
 
-    auto input_format = input->format();
-
     mkldnn::memory::data_type dt =
         paddle::framework::ToMKLDNNDataType(input->type());
     const std::string key = CreateKey(ctx, src_tz, pooling_type, ksize, strides,
@@ -134,7 +132,7 @@ class PoolMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
                           padding_right_bottom);
       }
 
-      auto src_md = platform::MKLDNNMemDesc(src_tz, dt, input_format);
+      auto src_md = input->get_mkldnn_prim_desc().desc();
 
       /* create memory descriptor for pooling without specified format
        * ('any') which lets a primitive (pooling in this case) choose
