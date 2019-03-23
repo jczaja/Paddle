@@ -66,20 +66,16 @@ public:
 private:
   std::map<std::string, std::pair<uint64, unsigned>> m_Measurements; // name, time, count
 };
-////////////////////////
 // TODO(jczaja): Move This to mkldnn_reuse.h
-static std::string pddims2str(const mkldnn::memory::dims& operand_dims) {
-  std::string dstr = "";
+static unsigned long long pdGetHash(const mkldnn::memory::dims& operand_dims) {
+  
+  unsigned long long hash_sum = 0;
+  
   for (size_t i = 0; i < operand_dims.size(); ++i) {
-    dstr += std::to_string(operand_dims[i]) + "-";
+    hash_sum = (hash_sum << 10) + (unsigned long)operand_dims[i];
   }
-  return dstr;
-}
 
-// TODO(jczaja): Move This to mkldnn_reuse.h
-static std::string pdGetHash(const mkldnn::memory::dims& operand_dims,  // NOLINT
-                           const std::string& suffix) {
-  return pddims2str(operand_dims) + suffix;
+  return hash_sum;
 }
 
 
@@ -93,8 +89,7 @@ inline std::shared_ptr<mkldnn::memory::primitive_desc> create_prim_desc_from_dim
 
         BEGIN();
    // Make hash of PD
-   auto key = std::string("PD-") + pdGetHash(ltz,std::to_string(static_cast<int>(fmt)) +
-    std::to_string(static_cast<int>(data_type)));
+   auto key = std::to_string(pdGetHash(ltz) * static_cast<unsigned long long>(data_type) * static_cast<unsigned long long>(fmt));
 
         END("Key gen");
         BEGIN();
