@@ -25,6 +25,53 @@ limitations under the License. */
 namespace paddle {
 namespace framework {
 
+/////////// PROFILING /////
+#include <x86intrin.h>
+
+#define INIT_PERF() static RtdscHelper rtdsc_helper
+#define MAKE_PERF_VAR() unsigned long long perf = 0; (void) perf
+#define BEGIN() perf = __rdtsc()
+#define END(name) rtdsc_helper.AddMeasurement(name, __rdtsc() - perf)
+#define BEGIN_OVERALL() unsigned long long overall = __rdtsc()
+#define END_OVERALL() rtdsc_helper.AddMeasurement("Overall", __rdtsc() - overall)
+
+class RtdscHelper
+{
+using uint64 = unsigned long long;
+public:
+  void AddMeasurement(std::string name, uint64 time) {
+    if(m_Measurements.find(name) != m_Measurements.end()) {
+      m_Measurements[name].first += time;
+      m_Measurements[name].second++;
+    }
+    else
+      m_Measurements[name] = {time, 1};
+  }
+
+  void PrintResults() {
+    std::cout << "Bn measurement results" << std::endl;
+    auto width = std::setw(20);
+    std::cout << std::left << width << "Name"
+                           << width << "Avg Time"
+                           << width << "Ratio" << std::endl;
+    auto overall_m = m_Measurements["Overall"];
+    auto overall = overall_m.first / (double) overall_m.second;
+    for(auto const& m : m_Measurements) {
+      auto average = m.second.first / (double) m.second.second;
+      std::cout << std::left << width << m.first
+                             << width << average
+                             << width << average / overall << std::endl;
+    }
+    std::cout << "------------------------" << std::endl;
+  }
+
+  ~RtdscHelper() {
+    PrintResults();
+  }
+private:
+  std::map<std::string, std::pair<uint64, unsigned>> m_Measurements; // name, time, count
+};
+////////////////////////
 static void PassTensorData(Tensor *from, Tensor *to) {
   to->ShareDataWith(*from);
   *from = Tensor();
@@ -51,14 +98,24 @@ void TransformData(const OpKernelType &expected_kernel_type,
 #ifdef PADDLE_WITH_MKLDNN
         // Case1 - transform from Non-MKLDNN OPKernel to MKLDNN OPKernel
         // Just set layout/format. No real transform occur
-        out.ShareDataWith(input_tensor);
+        INIT_PERF();
+        MAKE_PERF_VAR();
+        BEGIN_OVERALL();
 
+        BEGIN();
+        out.ShareDataWith(input_tensor);
+        END("ShareDataWith");
+        BEGIN();
         auto out_mem_pd = paddle::platform::create_prim_desc_from_dims(
             paddle::framework::vectorize2int(out.dims()),
             paddle::platform::mkldnn_fmt(out.dims().size()),
             paddle::framework::ToMKLDNNDataType(in.type()));
+        END("create_prim_desc_from_dims");
+        BEGIN();
 
         out.set_mkldnn_prim_desc(out_mem_pd);
+        END("set_mkldnn_prim_desc");
+        END_OVERALL();
 #endif
       } else {
         // Case2 - transfrom from MKLDNN OPKernel to Non-MKLDNN OPKernel

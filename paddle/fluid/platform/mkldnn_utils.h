@@ -20,6 +20,7 @@ limitations under the License. */
 namespace paddle {
 namespace platform {
 
+
 inline mkldnn::memory::primitive_desc create_prim_desc_from_dims(
     const std::vector<int>& ltz, mkldnn::memory::format fmt,
     mkldnn::memory::data_type data_type = mkldnn::memory::data_type::f32) {
