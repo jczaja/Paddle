@@ -20,6 +20,53 @@ limitations under the License. */
 namespace paddle {
 namespace platform {
 
+/////////// PROFILING /////
+#include <x86intrin.h>
+
+#define INIT_PERF() static RtdscHelper rtdsc_helper
+#define MAKE_PERF_VAR() unsigned long long perf = 0; (void) perf
+#define BEGIN() perf = __rdtsc()
+#define END(name) rtdsc_helper.AddMeasurement(name, __rdtsc() - perf)
+#define BEGIN_OVERALL() unsigned long long overall = __rdtsc()
+#define END_OVERALL() rtdsc_helper.AddMeasurement("Overall", __rdtsc() - overall)
+
+class RtdscHelper
+{
+using uint64 = unsigned long long;
+public:
+  void AddMeasurement(std::string name, uint64 time) {
+    if(m_Measurements.find(name) != m_Measurements.end()) {
+      m_Measurements[name].first += time;
+      m_Measurements[name].second++;
+    }
+    else
+      m_Measurements[name] = {time, 1};
+  }
+
+  void PrintResults() {
+    std::cout << "Bn measurement results" << std::endl;
+    auto width = std::setw(20);
+    std::cout << std::left << width << "Name"
+                           << width << "Avg Time"
+                           << width << "Ratio" << std::endl;
+    auto overall_m = m_Measurements["Overall"];
+    auto overall = overall_m.first / (double) overall_m.second;
+    for(auto const& m : m_Measurements) {
+      auto average = m.second.first / (double) m.second.second;
+      std::cout << std::left << width << m.first
+                             << width << average
+                             << width << average / overall << std::endl;
+    }
+    std::cout << "------------------------" << std::endl;
+  }
+
+  ~RtdscHelper() {
+    PrintResults();
+  }
+private:
+  std::map<std::string, std::pair<uint64, unsigned>> m_Measurements; // name, time, count
+};
+////////////////////////
 // TODO(jczaja): Move This to mkldnn_reuse.h
 static std::string pddims2str(const mkldnn::memory::dims& operand_dims) {
   std::string dstr = "";
@@ -40,14 +87,24 @@ inline std::shared_ptr<mkldnn::memory::primitive_desc> create_prim_desc_from_dim
     const std::vector<int>& ltz, mkldnn::memory::format fmt,
     mkldnn::memory::data_type data_type = mkldnn::memory::data_type::f32) {
 
+        INIT_PERF();
+        MAKE_PERF_VAR();
+        BEGIN_OVERALL();
+
+        BEGIN();
    // Make hash of PD
    auto key = std::string("PD-") + pdGetHash(ltz,std::to_string(static_cast<int>(fmt)) +
     std::to_string(static_cast<int>(data_type)));
+
+        END("Key gen");
+        BEGIN();
    // If there is PD registered then return reference to it
    auto& pool = platform::DeviceContextPool::Instance();
    auto place = paddle::platform::CPUPlace();
    auto dev_ctx = dynamic_cast<platform::MKLDNNDeviceContext*>(pool.Get(place));
 
+        END("context get");
+        BEGIN();
    auto mpd = std::static_pointer_cast<mkldnn::memory::primitive_desc>(dev_ctx->GetBlob(key));
    // if there is no PD then create one
    if (mpd == nullptr) {
@@ -78,6 +135,8 @@ inline std::shared_ptr<mkldnn::memory::primitive_desc> create_prim_desc_from_dim
      mpd = std::make_shared<mkldnn::memory::primitive_desc>(mem_fmt, cpu_engine);
      dev_ctx->SetBlob(key,mpd);
    } 
+   END("create/get mpd");
+   END_OVERALL();
 
   return mpd;
 }
