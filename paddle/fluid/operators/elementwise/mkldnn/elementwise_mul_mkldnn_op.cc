@@ -61,7 +61,7 @@ static void ReorderInput(framework::Tensor* tensor,
       paddle::framework::vectorize2int(tensor->dims()),
       paddle::platform::mkldnn_fmt(tensor->dims().size()),
       platform::MKLDNNGetDataType<T>());
-  out_tensor.set_mkldnn_prim_desc(out_mem_pd);
+  out_tensor.set_mkldnn_prim_desc(*out_mem_pd);
 
   mkldnn::memory input_memory = {tensor->get_mkldnn_prim_desc(),
                                  to_void_cast<T>(tensor->data<T>())};

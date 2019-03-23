@@ -16,6 +16,7 @@ limitations under the License. */
 #include "mkldnn.hpp"
 #include "paddle/fluid/operators/softmax_op.h"
 #include "paddle/fluid/platform/mkldnn_reuse.h"
+#include "paddle/fluid/platform/mkldnn_utils.h"
 
 namespace paddle {
 namespace operators {
@@ -164,7 +165,7 @@ class SoftmaxMKLDNNKernel : public paddle::framework::OpKernel<T> {
     auto output_mem_pd = paddle::platform::create_prim_desc_from_dims(
         paddle::framework::vectorize2int(output->dims()),
         paddle::platform::mkldnn_fmt(output->dims().size()));
-    output->set_mkldnn_prim_desc(output_mem_pd);
+    output->set_mkldnn_prim_desc(*output_mem_pd);
 
     std::vector<primitive> pipeline{
         *(static_cast<softmax_forward::primitive*>(softmax_p.get()))};

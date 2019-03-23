@@ -20,6 +20,7 @@ limitations under the License. */
 
 #ifdef PADDLE_WITH_MKLDNN
 #include "paddle/fluid/platform/mkldnn_helper.h"
+#include "paddle/fluid/platform/mkldnn_utils.h"
 #endif
 
 namespace paddle {
@@ -113,7 +114,7 @@ void TransformData(const OpKernelType &expected_kernel_type,
         END("create_prim_desc_from_dims");
         BEGIN();
 
-        out.set_mkldnn_prim_desc(out_mem_pd);
+        out.set_mkldnn_prim_desc(*out_mem_pd);
         END("set_mkldnn_prim_desc");
         END_OVERALL();
 #endif
