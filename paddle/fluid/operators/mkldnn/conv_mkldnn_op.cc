@@ -29,6 +29,54 @@ using mkldnn::stream;
 using platform::to_void_cast;
 using platform::GetMKLDNNFormat;
 
+/////////// PROFILING /////
+#include <x86intrin.h>
+
+#define INIT_PERF() static RtdscHelper rtdsc_helper
+#define MAKE_PERF_VAR() unsigned long long perf = 0; (void) perf
+#define BEGIN() perf = __rdtsc()
+#define END(name) rtdsc_helper.AddMeasurement(name, __rdtsc() - perf)
+#define BEGIN_OVERALL() unsigned long long overall = __rdtsc()
+#define END_OVERALL() rtdsc_helper.AddMeasurement("Overall", __rdtsc() - overall)
+
+class RtdscHelper
+{
+using uint64 = unsigned long long;
+public:
+  void AddMeasurement(std::string name, uint64 time) {
+    if(m_Measurements.find(name) != m_Measurements.end()) {
+      m_Measurements[name].first += time;
+      m_Measurements[name].second++;
+    }
+    else
+      m_Measurements[name] = {time, 1};
+  }
+
+  void PrintResults() {
+    std::cout << "Bn measurement results" << std::endl;
+    auto width = std::setw(20);
+    std::cout << std::left << width << "Name"
+                           << width << "Avg Time"
+                           << width << "Ratio" << std::endl;
+    auto overall_m = m_Measurements["Overall"];
+    auto overall = overall_m.first / (double) overall_m.second;
+    for(auto const& m : m_Measurements) {
+      auto average = m.second.first / (double) m.second.second;
+      std::cout << std::left << width << m.first
+                             << width << average
+                             << width << average / overall << std::endl;
+    }
+    std::cout << "------------------------" << std::endl;
+  }
+
+  ~RtdscHelper() {
+    PrintResults();
+  }
+private:
+  std::map<std::string, std::pair<uint64, unsigned>> m_Measurements; // name, time, count
+};
+
+
 inline void GetWeightsTz(std::vector<int>& weights_tz, int groups,  // NOLINT
                          bool is_conv3d) {
   if (groups > 1) {
@@ -87,6 +135,12 @@ class ConvMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
   void ComputeFP32(const paddle::framework::ExecutionContext& ctx) const {
     const bool is_test = ctx.Attr<bool>("is_test");
 
+    INIT_PERF();
+    MAKE_PERF_VAR();
+    BEGIN_OVERALL();
+
+    BEGIN();
+
     auto& dev_ctx =
         ctx.template device_context<paddle::platform::MKLDNNDeviceContext>();
     const auto& mkldnn_engine = dev_ctx.GetEngine();
@@ -140,12 +194,16 @@ class ConvMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
     GetWeightsTz(weights_tz, g, is_conv3d);
     std::vector<int> dst_tz = paddle::framework::vectorize2int(output->dims());
 
+    END("Invocation");
+    BEGIN();
     // Get unique name for storing MKLDNN primitives
     const std::string key = platform::ConvMKLDNNHandler::GetHash(
         src_tz, weights_tz, strides, paddings, dilations, groups,
         ctx.op().Input("Input") + ctx.op().Input("Filter"));
     const std::string key_conv_pd = key + "@conv_pd";
 
+    END("Key gen");
+    BEGIN();
     std::vector<primitive> pipeline;
 
     auto src_format = input->format();
@@ -183,6 +241,8 @@ class ConvMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
     auto dst_md = platform::MKLDNNMemDesc(
         dst_tz, platform::MKLDNNGetDataType<T>(), chosen_memory_format);
 
+    END("mem desc");
+    BEGIN();
     // create a conv primitive descriptor and save it for usage in backward
     std::shared_ptr<mkldnn::convolution_forward::primitive_desc> conv_pd;
     auto fwd_prop_kind = is_test ? mkldnn::prop_kind::forward_inference
@@ -202,8 +262,12 @@ class ConvMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
     // Save conv_pd/src_memory/weights_memory for backward pass
     if (!is_test) dev_ctx.SetBlob(key_conv_pd, conv_pd);
 
+    END("prim desc");
+    BEGIN();
     platform::ConvMKLDNNHandler handler(conv_pd, dev_ctx, mkldnn_engine, key);
 
+    END("handler");
+    BEGIN();
     // create mkldnn memory from input tensors (data/weights)
     auto user_src_memory_p =
         handler.AcquireSrcMemory(user_src_md, to_void_cast<T>(input_data));
@@ -216,6 +280,8 @@ class ConvMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
     auto weights_memory_p = handler.AcquireWeightsMemoryFromPrimitive(
         user_weights_memory_p, pipeline, is_test);
 
+    END("mem crea");
+    BEGIN();
     std::shared_ptr<mkldnn::memory> dst_memory_p;
 
     if (fuse_residual_conn) {
@@ -277,12 +343,19 @@ class ConvMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
                                           dst_memory_p);
     }
 
+    END("fuses");
+    BEGIN();
     // push primitive to stream and wait until it's executed
     pipeline.push_back(*conv_p);
     stream(stream::kind::eager).submit(pipeline).wait();
 
+    END("Exec");
+    BEGIN();
     output->set_layout(DataLayout::kMKLDNN);
     output->set_format(GetMKLDNNFormat(*dst_memory_p));
+
+    END("set_format");
+    END_OVERALL();
   }
   void ComputeINT8(const paddle::framework::ExecutionContext& ctx) const {
     const bool is_test = ctx.Attr<bool>("is_test");
