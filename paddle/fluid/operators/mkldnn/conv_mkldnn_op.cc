@@ -325,6 +325,8 @@ class ConvMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
           handler.AcquireDstMemoryFromPrimitive(to_void_cast<T>(output_data));
     }
 
+    END("fuses");
+    BEGIN();
     // create convolution op primitive
     std::shared_ptr<mkldnn::convolution_forward> conv_p;
     if (bias) {
@@ -343,7 +345,7 @@ class ConvMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
                                           dst_memory_p);
     }
 
-    END("fuses");
+    END("conv creat");
     BEGIN();
     // push primitive to stream and wait until it's executed
     pipeline.push_back(*conv_p);
