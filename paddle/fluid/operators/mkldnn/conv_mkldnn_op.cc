@@ -144,18 +144,14 @@ class ConvMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
 
     std::vector<primitive> pipeline;
 
-    // For convolution with groups we need to recreate primitive descriptor
-    // as Paddle tensor is not having group dims while mkldnn treats
-    // group as another dimensions
-    auto user_weights_mpd = filter->get_mkldnn_prim_desc();
-    if (g > 1) {
-      mkldnn::memory::format weights_format =
-          GetWeightsFormat(filter->format(), g, is_conv3d);
-      auto user_weights_md = platform::MKLDNNMemDesc(
-          {weights_tz}, platform::MKLDNNGetDataType<T>(), weights_format);
-      user_weights_mpd =
-          mkldnn::memory::primitive_desc(user_weights_md, mkldnn_engine);
-    }
+    auto src_format = input->format();
+    mkldnn::memory::format weights_format =
+        GetWeightsFormat(filter->format(), g, is_conv3d);
+
+    auto user_src_md = platform::MKLDNNMemDesc(
+        {src_tz}, platform::MKLDNNGetDataType<T>(), src_format);
+    auto user_weights_md = platform::MKLDNNMemDesc(
+        {weights_tz}, platform::MKLDNNGetDataType<T>(), weights_format);
 
     /* create memory descriptor for convolution without specified format
      * ('any') which lets a primitive (convolution in this case) choose
@@ -165,7 +161,7 @@ class ConvMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
     auto chosen_memory_format =
         platform::data_format_to_memory_format(data_format);
 
-    mkldnn::memory::format weights_format = mkldnn::memory::format::any;
+    weights_format = mkldnn::memory::format::any;
     // Check the format for user's special output
     if (chosen_memory_format != mkldnn::memory::format::any) {
       if (is_conv3d) {
@@ -205,10 +201,10 @@ class ConvMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
     platform::ConvMKLDNNHandler handler(conv_pd, dev_ctx, mkldnn_engine, key);
 
     // create mkldnn memory from input tensors (data/weights)
-    auto user_src_memory_p = handler.AcquireSrcMemory(
-        input->get_mkldnn_prim_desc(), to_void_cast<T>(input_data));
+    auto user_src_memory_p =
+        handler.AcquireSrcMemory(user_src_md, to_void_cast<T>(input_data));
     auto user_weights_memory_p = handler.AcquireWeightsMemory(
-        user_weights_mpd, to_void_cast<T>(filter_data));
+        user_weights_md, to_void_cast<T>(filter_data));
 
     // create reorder primitive if the input format is not the preferred one
     auto src_memory_p =
