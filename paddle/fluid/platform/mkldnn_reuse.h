@@ -406,6 +406,12 @@ template <class forward_t, class backward_data_t, class backward_weights_t>
 class ConvMKLDNNTemplateHandler : public MKLDNNHandler {
  public:
   ConvMKLDNNTemplateHandler(
+      const platform::MKLDNNDeviceContext& dev_ctx, mkldnn::engine engine,
+      const std::string& base_key)
+      : platform::MKLDNNHandler(dev_ctx, engine, base_key) { }
+
+  //TODO(jczaja): remove after transforming conv transpose
+  ConvMKLDNNTemplateHandler(
       std::shared_ptr<typename forward_t::primitive_desc> conv_pd,
       const platform::MKLDNNDeviceContext& dev_ctx, mkldnn::engine engine,
       const std::string& base_key)
@@ -548,6 +554,113 @@ class ConvMKLDNNTemplateHandler : public MKLDNNHandler {
                                "@bias_mem_p", pipeline, is_persistent, is_INT8,
                                scale_data, mask);
   }
+
+
+  mkldnn::primitive_attr CreatePostOps (bool fuse_relu, bool fuse_residual_conn) const {
+
+    mkldnn::primitive_attr conv_attr;
+    mkldnn::post_ops post_operations;
+    // Fusion with Elementwise layer relies on adding a sum post-operation with
+    // the scale parameter. It is assumed that when fuse_residual_connection is
+    // true, the output tensor contains the data coming from residual
+    // connection. The result of this post_op is:
+    // Output = scale * Output + Conv_Out.
+    if (fuse_residual_conn) {
+      post_operations.append_sum(1.0f);
+    }
+    // Fusion with ReLU layer is executed through the PostOps feature. Create a
+    // PostOps object and configure it to execute an eltwise relu operation.
+    if (fuse_relu) {
+      constexpr float scale = 1.0f;
+      constexpr float negative_slope = 0.0f;
+      constexpr float placeholder = 0.0f;
+      post_operations.append_eltwise(scale, mkldnn::algorithm::eltwise_relu,
+                                     negative_slope, placeholder);
+    }
+    conv_attr.set_post_ops(post_operations);
+    return conv_attr;
+  };
+
+
+  std::shared_ptr<typename forward_t::primitive_desc> AcquireConvolutionPrimitiveDescriptor(
+                       const mkldnn::memory::desc& src,
+                       const mkldnn::memory::desc& weights,
+                       const mkldnn::memory::desc& dst, const std::vector<int>& strides,
+                       const std::vector<int>& paddings,
+                       const mkldnn::engine& engine, const bool fuse_relu,
+                       const bool fuse_residual_conn,
+                       mkldnn::prop_kind fwd_prop_kind)
+  {
+    const std::string key_conv_pd = key_ + "@conv_pd";
+
+    auto conv_pd = std::static_pointer_cast<typename forward_t::primitive_desc>(dev_ctx_.GetBlob(key_conv_pd));
+
+    if (conv_pd == nullptr) {
+      mkldnn::memory::dims stride_dims = strides;
+      mkldnn::memory::dims padding_dims = paddings;
+
+      // TODO(jczaja): convolution_direct to be template based
+      auto conv_desc = typename forward_t::desc(
+          fwd_prop_kind, mkldnn::convolution_direct, src, weights, dst,
+          stride_dims, padding_dims, padding_dims, mkldnn::padding_kind::zero);
+
+      mkldnn::primitive_attr conv_attr =
+      CreatePostOps(fuse_relu, fuse_residual_conn);
+
+   
+      // TODO(jczaja): convolution_direct to be template based
+      conv_pd_.reset(new mkldnn::convolution_forward::primitive_desc(
+      conv_desc, conv_attr, engine));
+
+      // Save conv_pd/src_memory/weights_memory for backward pass
+      if (fwd_prop_kind == mkldnn::prop_kind::forward_training) dev_ctx_.SetBlob(key_conv_pd, conv_pd);
+
+    } else {
+      conv_pd_ = conv_pd;
+      is_reusing_ = true;
+    }
+
+    return conv_pd_;
+  }
+
+
+  std::shared_ptr<typename forward_t::primitive_desc> AcquireConvolutionPrimitiveDescriptor(
+                       const mkldnn::memory::desc& src, const mkldnn::memory::desc& weights,
+                       const mkldnn::memory::desc& bias, const mkldnn::memory::desc& dst,
+                       const std::vector<int>& strides,
+                       const std::vector<int>& paddings,
+                       const mkldnn::engine& engine, const bool fuse_relu,
+                       const bool fuse_residual_conn,
+                       mkldnn::prop_kind fwd_prop_kind) {
+    const std::string key_conv_pd = key_ + "@conv_pd";
+
+    auto conv_pd = std::static_pointer_cast<typename forward_t::primitive_desc>(dev_ctx_.GetBlob(key_conv_pd));
+
+    if (conv_pd == nullptr) {
+      mkldnn::memory::dims stride_dims = strides;
+      mkldnn::memory::dims padding_dims = paddings;
+
+      // TODO(ADD reusing)
+      auto conv_desc = mkldnn::convolution_forward::desc(
+          fwd_prop_kind, mkldnn::convolution_direct, src, weights, bias, dst,
+          stride_dims, padding_dims, padding_dims, mkldnn::padding_kind::zero);
+
+      mkldnn::primitive_attr conv_attr =
+          CreatePostOps(fuse_relu, fuse_residual_conn);
+
+      conv_pd_.reset(new mkldnn::convolution_forward::primitive_desc(
+          conv_desc, conv_attr, engine));
+      // Save conv_pd/src_memory/weights_memory for backward pass
+      if (fwd_prop_kind == mkldnn::prop_kind::forward_training) dev_ctx_.SetBlob(key_conv_pd, conv_pd);
+
+    } else {
+      conv_pd_ = conv_pd;
+      is_reusing_ = true;
+    }
+
+    return conv_pd_;
+  }
+
 
   std::shared_ptr<forward_t> AcquireConvolution(
       std::shared_ptr<mkldnn::memory> src_memory_p,

@@ -145,7 +145,6 @@ class ConvMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
         &key, src_tz, weights_tz, strides, paddings, dilations, groups, src_dt,
         input->format(), fuse_relu, fuse_residual_conn,
         ctx.op().Input("Input") + ctx.op().Input("Filter"));
-    const std::string key_conv_pd = key + "@conv_pd";
 
     std::vector<primitive> pipeline;
 
@@ -188,6 +187,8 @@ class ConvMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
     auto dst_md = platform::MKLDNNMemDesc(
         dst_tz, platform::MKLDNNGetDataType<T>(), chosen_memory_format);
 
+    platform::ConvMKLDNNHandler handler(dev_ctx, mkldnn_engine, key);
+
     // create a conv primitive descriptor and save it for usage in backward
     std::shared_ptr<mkldnn::convolution_forward::primitive_desc> conv_pd;
     auto fwd_prop_kind = is_test ? mkldnn::prop_kind::forward_inference
@@ -196,18 +197,15 @@ class ConvMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
       bias_tz = paddle::framework::vectorize2int(bias->dims());
       auto bias_md = platform::MKLDNNMemDesc(
           bias_tz, platform::MKLDNNGetDataType<T>(), memory::format::x);
-      conv_pd = ConvFwdPrimitiveDesc(
+      conv_pd = handler.AcquireConvolutionPrimitiveDescriptor(
           src_md, weights_md, bias_md, dst_md, strides, paddings, mkldnn_engine,
           fuse_relu, fuse_residual_conn, fwd_prop_kind);
     } else {
-      conv_pd = ConvFwdPrimitiveDesc(src_md, weights_md, dst_md, strides,
+      conv_pd = handler.AcquireConvolutionPrimitiveDescriptor(src_md, weights_md, dst_md, strides,
                                      paddings, mkldnn_engine, fuse_relu,
                                      fuse_residual_conn, fwd_prop_kind);
     }
-    // Save conv_pd/src_memory/weights_memory for backward pass
-    if (!is_test) dev_ctx.SetBlob(key_conv_pd, conv_pd);
 
-    platform::ConvMKLDNNHandler handler(conv_pd, dev_ctx, mkldnn_engine, key);
 
     // create mkldnn memory from input tensors (data/weights)
     auto user_src_memory_p = handler.AcquireSrcMemory(
@@ -636,30 +634,6 @@ class ConvMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
   }
 
  private:
-  mkldnn::primitive_attr CreatePostOps(bool fuse_relu,
-                                       bool fuse_residual_conn) const {
-    mkldnn::primitive_attr conv_attr;
-    mkldnn::post_ops post_operations;
-    // Fusion with Elementwise layer relies on adding a sum post-operation with
-    // the scale parameter. It is assumed that when fuse_residual_connection is
-    // true, the output tensor contains the data coming from residual
-    // connection. The result of this post_op is:
-    // Output = scale * Output + Conv_Out.
-    if (fuse_residual_conn) {
-      post_operations.append_sum(1.0f);
-    }
-    // Fusion with ReLU layer is executed through the PostOps feature. Create a
-    // PostOps object and configure it to execute an eltwise relu operation.
-    if (fuse_relu) {
-      constexpr float scale = 1.0f;
-      constexpr float negative_slope = 0.0f;
-      constexpr float placeholder = 0.0f;
-      post_operations.append_eltwise(scale, mkldnn::algorithm::eltwise_relu,
-                                     negative_slope, placeholder);
-    }
-    conv_attr.set_post_ops(post_operations);
-    return conv_attr;
-  }
 
   mkldnn::primitive_attr CreatePostOps(
       bool fuse_relu, bool fuse_residual_conn,
