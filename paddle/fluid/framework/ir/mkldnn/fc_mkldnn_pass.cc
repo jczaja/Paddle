@@ -69,6 +69,7 @@ void FCMKLDNNPass::ApplyImpl(ir::Graph* graph) const {
     OpDesc* desc = fc->Op();
     auto in_size = fc->inputs[0]->Var()->GetShape().size();
     if (in_size != 2 && in_size != 4) {  // if input dimensions aren't
+      std::cout << "==> MKLDNN FC not used due to dims " <<std::endl;
       return;                            // supported don't perform the fuse
     }
     desc->SetAttr("use_mkldnn", true);
