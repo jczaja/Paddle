@@ -104,8 +104,6 @@ void* GetDataFromTensor(const Tensor& tensor, mkldnn::memory::data_type type) {
       return platform::to_void_cast(tensor.data<int8_t>());
     case mkldnn::memory::data_type::u8:
       return platform::to_void_cast(tensor.data<unsigned char>());
-    case mkldnn::memory::data_type::s16:
-      return platform::to_void_cast(tensor.data<int16_t>());
     case mkldnn::memory::data_type::s32:
       return platform::to_void_cast(tensor.data<int32_t>());
     default:
@@ -126,8 +124,8 @@ void TransDataLayoutFromMKLDNN(const OpKernelType& kernel_type_for_var,
       "non-MKLDNN");
 
 #ifdef PADDLE_WITH_MKLDNN
-  PADDLE_ENFORCE(in.format() != memory::format::format_undef &&
-                     in.format() != memory::format::any,
+  PADDLE_ENFORCE(in.format() != memory::format_tag::undef &&
+                     in.format() != memory::format_tag::any,
                  "Input tensor should have specified memory format");
 
   // Set default as NCHW in case not specified
@@ -143,7 +141,7 @@ void TransDataLayoutFromMKLDNN(const OpKernelType& kernel_type_for_var,
   std::vector<int> out_tz = in_tz;
 
   memory::data_type in_type = ToMKLDNNDataType(in.type());
-  PADDLE_ENFORCE(in_type != memory::data_type::data_undef,
+  PADDLE_ENFORCE(in_type != memory::data_type::undef,
                  "Input tensor type is not supported: %s", in.type());
   memory::data_type out_type = in_type;
 
@@ -159,9 +157,9 @@ void TransDataLayoutFromMKLDNN(const OpKernelType& kernel_type_for_var,
     auto out_data = out->mutable_data(expected_kernel_type.place_, in.type());
 
     auto in_memory =
-        memory({{{in_tz}, in_type, in_format}, cpu_engine}, in_data);
+        memory({{in_tz.begin(), in_tz.end()}, in_type, in_format}, cpu_engine, in_data);
     auto out_memory =
-        memory({{{out_tz}, out_type, out_format}, cpu_engine}, out_data);
+        memory({{out_tz.begin(), out_tz.end()}, out_type, out_format}, cpu_engine, out_data);
 
     platform::Reorder(in_memory, out_memory);
   } else {
@@ -169,7 +167,7 @@ void TransDataLayoutFromMKLDNN(const OpKernelType& kernel_type_for_var,
   }
   out->set_layout(out_layout);
   // reset format since the out tensor will be feed to non-MKLDNN OPkernel
-  out->set_format(memory::format::format_undef);
+  out->set_format(memory::format_tag::undef);
 #endif
 }
 

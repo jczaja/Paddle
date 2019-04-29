@@ -69,8 +69,8 @@ tf_pd<Type> MKLDNNBwdPrimitiveDesc(const Engine& e, const Primitive& p,
 
 inline mkldnn::memory::desc MKLDNNMemDesc(const std::vector<int>& dims,
                                           mkldnn::memory::data_type data_type,
-                                          mkldnn::memory::format format) {
-  mkldnn::memory::dims tz = dims;
+                                          mkldnn::memory::format_tag format) {
+  mkldnn::memory::dims tz(dims.begin(), dims.end());
   return mkldnn::memory::desc({tz}, data_type, format);
 }
 
@@ -81,79 +81,81 @@ inline bool CanMKLDNNBeUsed(const framework::ExecutionContext& ctx) {
 
 template <typename Type>
 mkldnn::memory::data_type MKLDNNGetDataType() {
-  return mkldnn::memory::data_undef;
+  return mkldnn::memory::data_type::undef;
 }
 
 template <>
 inline mkldnn::memory::data_type MKLDNNGetDataType<float>() {
-  return mkldnn::memory::f32;
+  return mkldnn::memory::data_type::f32;
 }
 
-inline void Reorder(const mkldnn::memory& src, const mkldnn::memory& dst) {
-  auto reorder_prim = mkldnn::reorder(src, dst);
-  std::vector<mkldnn::primitive> pipeline;
-  pipeline.push_back(reorder_prim);
-  mkldnn::stream(mkldnn::stream::kind::eager).submit(pipeline).wait();
+inline void Reorder(const mkldnn::memory& src, const mkldnn::memory& dst)  {
+  auto eng_i = src.get_engine();
+  auto eng_o = dst.get_engine();
+  mkldnn::reorder::primitive_desc r_pd(eng_i, src.get_desc(), eng_o, dst.get_desc());
+  auto strm = mkldnn::stream(r_pd.get_engine());
+  auto reorder_prim = mkldnn::reorder(r_pd);
+  reorder_prim.execute(strm, const_cast<mkldnn::memory&>(src), const_cast<mkldnn::memory&>(dst));
 }
 
-inline mkldnn::memory::format GetMKLDNNFormat(const mkldnn::memory memory) {
-  return static_cast<mkldnn::memory::format>(
-      memory.get_primitive_desc().desc().data.format);
+inline mkldnn::memory::format_tag GetMKLDNNFormat(const mkldnn::memory memory) {
+//  return static_cast<mkldnn::memory::format_tag>(
+//      memory.get_desc().data.format);
+      return mkldnn::memory::format_tag::nchw;  // HACK to make it compile      
 }
 
-inline mkldnn::memory::format GetMKLDNNFormat(
+inline mkldnn::memory::format_tag GetMKLDNNFormat(
     const mkldnn::sum::primitive_desc& memory) {
-  return static_cast<mkldnn::memory::format>(
-      memory.dst_primitive_desc().desc().data.format);
+      return mkldnn::memory::format_tag::nchw;  // HACK to make it compile      
 }
 
-inline mkldnn::memory::format MKLDNNFormatForSize(
-    size_t dims_size, mkldnn::memory::format data_format) {
+inline mkldnn::memory::format_tag MKLDNNFormatForSize(
+    size_t dims_size, mkldnn::memory::format_tag data_format) {
   if (dims_size == 1) {
-    return mkldnn::memory::format::x;
+    return mkldnn::memory::format_tag::x;
   } else if (dims_size == 2) {
-    return mkldnn::memory::format::nc;
+    return mkldnn::memory::format_tag::nc;
   } else if (dims_size == 3) {
-    if (data_format == mkldnn::memory::format::nchw) {
-      return mkldnn::memory::format::ncw;
-    } else if (data_format == mkldnn::memory::format::nhwc) {
-      return mkldnn::memory::format::nwc;
+    if (data_format == mkldnn::memory::format_tag::nchw) {
+      return mkldnn::memory::format_tag::ncw;
+    } else if (data_format == mkldnn::memory::format_tag::nhwc) {
+      return mkldnn::memory::format_tag::nwc;
     }
   } else if (dims_size == 5) {
-    if (data_format == mkldnn::memory::format::nchw) {
-      return mkldnn::memory::format::ncdhw;
-    } else if (data_format == mkldnn::memory::format::nhwc) {
-      return mkldnn::memory::format::ndhwc;
+    if (data_format == mkldnn::memory::format_tag::nchw) {
+      return mkldnn::memory::format_tag::ncdhw;
+    } else if (data_format == mkldnn::memory::format_tag::nhwc) {
+      return mkldnn::memory::format_tag::ndhwc;
     }
   }
   return data_format;
 }
 
-inline mkldnn::memory::format data_format_to_memory_format(
+inline mkldnn::memory::format_tag data_format_to_memory_format(
     const std::string& data_format) {
   switch (framework::StringToDataLayout(data_format)) {
     case framework::DataLayout::kNHWC:
-      return mkldnn::memory::format::nhwc;
+      return mkldnn::memory::format_tag::nhwc;
     case framework::DataLayout::kNCHW:
-      return mkldnn::memory::format::nchw;
+      return mkldnn::memory::format_tag::nchw;
     default:
-      return mkldnn::memory::format::any;
+      return mkldnn::memory::format_tag::any;
   }
 }
 
-inline mkldnn::memory::format StringToMKLDNNFormat(std::string* format) {
+inline mkldnn::memory::format_tag StringToMKLDNNFormat(std::string* format) {
   std::transform(format->begin(), format->end(), format->begin(), ::tolower);
 
   if (!format->compare("nchw")) {
-    return mkldnn::memory::format::nchw;
+    return mkldnn::memory::format_tag::nchw;
   } else if (!format->compare("nchw16c")) {
-    return mkldnn::memory::format::nChw16c;
+    return mkldnn::memory::format_tag::nChw16c;
   } else if (!format->compare("nchw8c")) {
-    return mkldnn::memory::format::nChw8c;
+    return mkldnn::memory::format_tag::nChw8c;
   } else if (!format->compare("nhwc")) {
-    return mkldnn::memory::format::nhwc;
+    return mkldnn::memory::format_tag::nhwc;
   } else {
-    return mkldnn::memory::format::any;
+    return mkldnn::memory::format_tag::any;
   }
 }
 

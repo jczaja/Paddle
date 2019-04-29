@@ -235,7 +235,7 @@ std::set<std::string> Tracer::Trace(OpBase* op, const VarBasePtrMap& inputs,
         new std::unordered_map<std::string, std::string>());
     // NOTE(minqiyang): We don't support control flow op in imperative now
     // Add grad_block_ when we want to support it
-    CreateGradOp(*fwd_op_desc, {}, {}, &op->grad_op_descs_, grad_to_var.get());
+//    CreateGradOp(*fwd_op_desc, {}, {}, &op->grad_op_descs_, grad_to_var.get());
 
     VLOG(5) << "create grad op desc: " << op->grad_op_descs_[0]->Type();
 

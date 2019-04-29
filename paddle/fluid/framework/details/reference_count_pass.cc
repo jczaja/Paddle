@@ -163,7 +163,7 @@ ExtractComputationOpFromLastLivedVar(VarHandle *var, size_t scope_idx,
     // No pending ops or generated op is nullptr
     if (candidates.empty()) {
       *ok = false;
-      return {};
+      return std::unordered_set<ComputationOpHandle *>();
     }
   }
 
@@ -182,7 +182,7 @@ ExtractComputationOpFromLastLivedVar(VarHandle *var, size_t scope_idx,
           FindNextComputationOpHandleOrReturnItself(op, scope_idx);
       if (compute_op == nullptr) {
         *ok = false;
-        return {};
+         return std::unordered_set<ComputationOpHandle *>();
       }
       computation_op.emplace(compute_op);
     }

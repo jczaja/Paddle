@@ -96,7 +96,7 @@ static OpToVarNameSetMap ShrinkGCVars(
     const std::vector<platform::Place> &places, double fraction_of_memory_size,
     bool delete_lod_tensor_only = false) {
   // Do not perform gc when fraction_of_memory_size = 0
-  if (fraction_of_memory_size <= 0.0) return {};
+  if (fraction_of_memory_size <= 0.0) return OpToVarNameSetMap() ;
 
   /**
    * Step 1: Split all variables into LoDTensor and Non-LoDTensor.
