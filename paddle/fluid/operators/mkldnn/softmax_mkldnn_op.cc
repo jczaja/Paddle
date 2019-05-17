@@ -86,9 +86,7 @@ class SoftmaxMKLDNNHandler : public platform::MKLDNNHandler {
           *softmax_pd_, *(static_cast<mkldnn::memory*>(src_memory_p.get())),
           *(static_cast<mkldnn::memory*>(dst_memory_p.get())));
       dev_ctx_.SetBlob(prim_key, softmax_p);
-      std::cout << "===> Creating Softmax FWD primitive: " << prim_key << std::endl;
     } else {
-      std::cout << "===> Reusing Softmax FWD primitive: " << prim_key << std::endl;
       is_reusing_ = true;
     }
 

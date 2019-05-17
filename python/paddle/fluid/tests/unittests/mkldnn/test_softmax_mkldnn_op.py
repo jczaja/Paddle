@@ -29,7 +29,7 @@ class TestSoftmaxMKLDNNOp(TestSoftmaxOp):
 
 class TestSoftmaxMKLDNNOp2(TestSoftmaxMKLDNNOp):
     def get_x_shape(self):
-        return [2, 3, 4, 5]
+        return [16,100,100]
 
 
 # Check if primitives already exist in backward
