@@ -44,8 +44,6 @@ void SoftmaxFunctor<DeviceContext, T, is_test, Enable>::operator()(
   const int kBatchDim = 0;
   const int kClassDim = 1;
 
-  printf("=> SOFTMAX GENERIC OP\n");
-
   const int batch_size = logits.dimension(kBatchDim);
   const int num_classes = logits.dimension(kClassDim);
   const int num_remain = num_classes / axis_dim;
@@ -85,7 +83,6 @@ class SoftmaxFunctor<DeviceContext, float, true, enable_if_CPU<DeviceContext>> {
     float* out_data = Y->data<float>();
     const int kBatchDim = 0;
     const int kClassDim = 1;
-    printf("=> SOFTMAX XBYAK OP\n");
     // 2D data. Batch x C
     auto compute_softmax =
         jit::KernelFuncs<jit::SoftmaxTuple<float>, platform::CPUPlace>::Cache()

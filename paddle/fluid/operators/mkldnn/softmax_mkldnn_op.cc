@@ -135,9 +135,6 @@ class SoftmaxMKLDNNKernel : public paddle::framework::OpKernel<T> {
         input->dims(), output->dims(),
         "The shape of softmax's input and output must be identical.");
 
-    printf("=> SOFTMAX MKLDNN OP\n");
-
-
     // make sure 'output' holds memory, which will be shared by
     // 'flattened_output' later.
     output->mutable_data<T>(ctx.GetPlace());
