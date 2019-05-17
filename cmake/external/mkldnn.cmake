@@ -66,8 +66,9 @@ ExternalProject_Add(
     ${EXTERNAL_PROJECT_LOG_ARGS}
     DEPENDS             ${MKLDNN_DEPENDS}
     GIT_REPOSITORY      "https://github.com/jczaja/mkl-dnn.git"
-#    GIT_TAG             "842b60e2393d389835c5f44af5c66ce1f7cb6cde" #VSEXP -> MEMCPY
-    GIT_TAG             "7c54af5420c42a52235cb9d812a18a2af1067c7e" # FULL SOFTMAX
+    GIT_TAG             "842b60e2393d389835c5f44af5c66ce1f7cb6cde" #VSEXP -> MEMCPY
+#    GIT_TAG             "7c54af5420c42a52235cb9d812a18a2af1067c7e" # FULL SOFTMAX
+#    GIT_TAG  "f771de41ff4ddbec6a57e9acfa3440b5c399bba4" # vsExp replacced & cblas_sscal removed
     PREFIX              ${MKLDNN_SOURCES_DIR}
     UPDATE_COMMAND      ""
     CMAKE_ARGS          -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
