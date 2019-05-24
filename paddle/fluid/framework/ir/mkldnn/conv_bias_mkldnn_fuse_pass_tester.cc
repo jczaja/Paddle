@@ -154,4 +154,3 @@ TEST(ConvBiasFusePass, conv2d_transpose) {
 }  // namespace paddle
 
 USE_PASS(conv_bias_mkldnn_fuse_pass);
-USE_PASS(conv_transpose_bias_mkldnn_fuse_pass);
