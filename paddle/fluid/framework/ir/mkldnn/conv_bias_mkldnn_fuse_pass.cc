@@ -73,7 +73,7 @@ void ConvBiasFusePass::ApplyImpl(ir::Graph* graph) const {
     // check if fuse can be done and if MKL-DNN should be used
     FuseOptions fuse_option = FindFuseOption(*conv, *eltwise);
     if (fuse_option == DO_NOT_FUSE || fuse_option == FUSE_NATIVE) {
-      VLOG(3) << "do not perform conv+bias fuse";
+      VLOG(3) << "do not perform "+type()+"+bias fuse";
       return;
     }
 
