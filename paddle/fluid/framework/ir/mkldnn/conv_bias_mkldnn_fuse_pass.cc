@@ -133,5 +133,7 @@ void ConvBiasFusePass::ApplyImpl(ir::Graph* graph) const {
 }  // namespace paddle
 REGISTER_PASS(conv_bias_mkldnn_fuse_pass,
               paddle::framework::ir::ConvBiasFusePass);
+REGISTER_PASS(conv_transpose_bias_mkldnn_fuse_pass,
+              paddle::framework::ir::Conv3DBiasFusePass);
 REGISTER_PASS(conv3d_bias_mkldnn_fuse_pass,
               paddle::framework::ir::Conv3DBiasFusePass);
