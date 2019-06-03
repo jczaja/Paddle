@@ -33,8 +33,7 @@ class MKLDNNHandler {
                 const std::string& base_key)
       : dev_ctx_(dev_ctx),
         engine_(engine),
-        key_(base_key),
-        is_reusing_(false) {}
+        key_(base_key) {}
 
   std::shared_ptr<mkldnn::memory> AcquireSrcMemory(
       const mkldnn::memory::desc& md, void* ptr) {
@@ -70,19 +69,16 @@ class MKLDNNHandler {
   std::shared_ptr<mkldnn::memory> AcquireMemoryFromPrimitive(
       mkldnn::memory::primitive_desc mdp, void* ptr,
       const std::string& suffix) {
+    static std::mutex acquire_barrier;
+    std::lock_guard<std::mutex> block_threads_until_finish_this_job(acquire_barrier);
     auto local_key = key_ + suffix;
     auto mem_p =
         std::static_pointer_cast<mkldnn::memory>(dev_ctx_.GetBlob(local_key));
-    PADDLE_ENFORCE((mem_p != nullptr) || (is_reusing_ == false),
-                   "Fail to find mem primitive in device context");
     if (mem_p == nullptr) {
       mem_p = std::make_shared<mkldnn::memory>(mdp, ptr);
       dev_ctx_.SetBlob(local_key, mem_p);
     } else {
       mem_p->set_data_handle(ptr);
-      // Mark that reusing happenned. All primitives from operator instance
-      // should be reused or none of them. So we check consistency
-      is_reusing_ = true;
     }
     return mem_p;
   }
@@ -92,28 +88,23 @@ class MKLDNNHandler {
   std::shared_ptr<mkldnn::memory> AcquireMemory(
       const mkldnn::memory::desc& md, void* ptr, const std::string& suffix,
       user_function custom_func = {}) {
+    static std::mutex acquire_barrier;
+    std::lock_guard<std::mutex> block_threads_until_finish_this_job(acquire_barrier);
     /*Generate key*/
     auto local_key = key_ + suffix;
     auto mem_p =
         std::static_pointer_cast<mkldnn::memory>(dev_ctx_.GetBlob(local_key));
-    PADDLE_ENFORCE((mem_p != nullptr) || (is_reusing_ == false),
-                   "Fail to find mem primitive in device context");
     if (mem_p == nullptr) {
-      // Call custom reorder/preprocessing func if available
       if (custom_func) {
         auto reordered_data = custom_func(reinterpret_cast<const float*>(ptr));
         dev_ctx_.SetBlob(local_key + "-custom_reorder", reordered_data);
         ptr = reinterpret_cast<void*>(reordered_data.get());
       }
-
       mem_p = std::make_shared<mkldnn::memory>(
           mkldnn::memory::primitive_desc{md, engine_}, ptr);
       dev_ctx_.SetBlob(local_key, mem_p);
     } else {
       mem_p->set_data_handle(ptr);
-      // Mark that reusing happenned. All primitives from operator instance
-      // should be reused or none of them. So we check consistency
-      is_reusing_ = true;
     }
     return mem_p;
   }
@@ -123,7 +114,8 @@ class MKLDNNHandler {
       const std::shared_ptr<mkldnn::memory>& target_memory_p,
       const std::string& suffix,
       std::vector<mkldnn::primitive>& pipeline) {  // NOLINT
-    auto local_key = key_ + suffix;
+    static std::mutex acquire_barrier;
+    std::lock_guard<std::mutex> block_threads_until_finish_this_job(acquire_barrier);
     auto key_reorder_p = key_ + suffix + "reorder_p";
 
     auto stored_reorder_p = std::static_pointer_cast<mkldnn::reorder>(
@@ -150,13 +142,13 @@ class MKLDNNHandler {
       bool is_persistent = false, bool is_INT8 = false,
       std::vector<float> scale_data = {1.0f}, int mask = 0) {
     // create reorder primitive if the input format is not the preferred one
+    static std::mutex acquire_barrier;
+    std::lock_guard<std::mutex> block_threads_until_finish_this_job(acquire_barrier);
     auto local_key = key_ + suffix;
     auto key_reorder_p = key_ + suffix + "reorder_p";
 
     auto target_memory_p =
         std::static_pointer_cast<mkldnn::memory>(dev_ctx_.GetBlob(local_key));
-    PADDLE_ENFORCE((target_memory_p != nullptr) || (is_reusing_ == false),
-                   "Fail to find mem primitive in device context");
     if (target_memory_p == nullptr) {
       target_memory_p = user_memory_p;
       std::shared_ptr<mkldnn::primitive> reorder_p;
@@ -187,7 +179,6 @@ class MKLDNNHandler {
       if (reorder_p != nullptr) {
         pipeline.push_back(*reorder_p);
       }
-      is_reusing_ = true;
     }
     return target_memory_p;
   }
@@ -268,7 +259,6 @@ class MKLDNNHandler {
   const MKLDNNDeviceContext& dev_ctx_;
   mkldnn::engine engine_;
   std::string key_;
-  bool is_reusing_;
 
  public:
   static constexpr int MaxKeyLength = 256;
@@ -287,11 +277,11 @@ class TransposeMKLDNNHandler : public MKLDNNHandler {
 
   std::shared_ptr<mkldnn::memory> AcquireSrcMemory(
       const mkldnn::memory::format& fmt, void* ptr) {
+    static std::mutex acquire_barrier;
+    std::lock_guard<std::mutex> block_threads_until_finish_this_job(acquire_barrier);
     auto local_key = key_ + "@user_src_mem_p";
     auto mem_p =
         std::static_pointer_cast<mkldnn::memory>(dev_ctx_.GetBlob(local_key));
-    PADDLE_ENFORCE((mem_p != nullptr) || (is_reusing_ == false),
-                   " find mem primitive in device context");
     if (mem_p == nullptr) {
       // Make memory descriptor using input format, unless it
       // cannot be trusted (nchw) then make up memory fmt manually
@@ -307,9 +297,6 @@ class TransposeMKLDNNHandler : public MKLDNNHandler {
       dev_ctx_.SetBlob(local_key, mem_p);
     } else {
       mem_p->set_data_handle(ptr);
-      // Mark that reusing happenned. All primitives from operator instance
-      // should be reused or none of them. So we check consistency
-      is_reusing_ = true;
     }
     return mem_p;
   }
@@ -317,10 +304,10 @@ class TransposeMKLDNNHandler : public MKLDNNHandler {
   std::shared_ptr<mkldnn::memory> AcquireDstMemory(framework::Tensor* output,
                                                    platform::Place place) {
     auto local_key = key_ + "@user_dst_mem_p";
+    static std::mutex acquire_barrier;
+    std::lock_guard<std::mutex> block_threads_until_finish_this_job(acquire_barrier);
     auto mem_p =
         std::static_pointer_cast<mkldnn::memory>(dev_ctx_.GetBlob(local_key));
-    PADDLE_ENFORCE((mem_p != nullptr) || (is_reusing_ == false),
-                   " find mem primitive in device context");
     if (mem_p == nullptr) {
       auto dst_mdp = mkldnn::memory::primitive_desc{
           Axis2MemoryDesc(dims_, axis_), engine_};
@@ -333,9 +320,6 @@ class TransposeMKLDNNHandler : public MKLDNNHandler {
     } else {
       auto dst_data = output->mutable_data<float>(place);
       mem_p->set_data_handle(dst_data);
-      // Mark that reusing happenned. All primitives from operator instance
-      // should be reused or none of them. So we check consistency
-      is_reusing_ = true;
     }
     return mem_p;
   }
@@ -343,18 +327,16 @@ class TransposeMKLDNNHandler : public MKLDNNHandler {
   std::shared_ptr<mkldnn::reorder> AcquireTranspose(
       std::shared_ptr<mkldnn::memory> dst_memory_p,
       std::shared_ptr<mkldnn::memory> src_memory_p) {
+    static std::mutex acquire_barrier;
+    std::lock_guard<std::mutex> block_threads_until_finish_this_job(acquire_barrier);
     auto prim_key = key_ + "@transpose_p";
     auto transpose_p =
         std::static_pointer_cast<mkldnn::reorder>(dev_ctx_.GetBlob(prim_key));
-    PADDLE_ENFORCE((transpose_p != nullptr) || (is_reusing_ == false),
-                   "Fail to find convolution primitive in device context");
     if (transpose_p == nullptr) {
       transpose_p =
           std::make_shared<mkldnn::reorder>(*(src_memory_p), *(dst_memory_p));
       dev_ctx_.SetBlob(prim_key, transpose_p);
-    } else {
-      is_reusing_ = true;
-    }
+    } 
     return transpose_p;
   }
 
@@ -609,6 +591,8 @@ class ConvMKLDNNTemplateHandler : public MKLDNNHandler {
       const bool fuse_relu, const bool fuse_residual_conn,
       const bool fuse_brelu, const float fuse_brelu_threshold,
       mkldnn::prop_kind fwd_prop_kind) {
+    static std::mutex acquire_barrier;
+    std::lock_guard<std::mutex> block_threads_until_finish_this_job(acquire_barrier);
     const std::string key_conv_pd = key_ + "@conv_pd";
 
     auto conv_pd = std::static_pointer_cast<typename forward_t::primitive_desc>(
@@ -637,7 +621,6 @@ class ConvMKLDNNTemplateHandler : public MKLDNNHandler {
       dev_ctx_.SetBlob(key_conv_pd, conv_pd_);
     } else {
       conv_pd_ = conv_pd;
-      is_reusing_ = true;
     }
 
     return conv_pd_;
@@ -647,18 +630,15 @@ class ConvMKLDNNTemplateHandler : public MKLDNNHandler {
       std::shared_ptr<mkldnn::memory> src_memory_p,
       std::shared_ptr<mkldnn::memory> weights_memory_p,
       std::shared_ptr<mkldnn::memory> dst_memory_p) {
+    static std::mutex acquire_barrier;
+    std::lock_guard<std::mutex> block_threads_until_finish_this_job(acquire_barrier);
     auto prim_key = key_ + "@conv_p";
     auto conv_p =
         std::static_pointer_cast<forward_t>(dev_ctx_.GetBlob(prim_key));
-    PADDLE_ENFORCE((conv_p != nullptr) || (is_reusing_ == false),
-                   "Fail to find convolution primitive in device context");
     if (conv_p == nullptr) {
       conv_p = std::make_shared<forward_t>(*conv_pd_, *src_memory_p,
                                            *weights_memory_p, *dst_memory_p);
-
       dev_ctx_.SetBlob(prim_key, conv_p);
-    } else {
-      is_reusing_ = true;
     }
     return conv_p;
   }
@@ -668,19 +648,17 @@ class ConvMKLDNNTemplateHandler : public MKLDNNHandler {
       std::shared_ptr<mkldnn::memory> weights_memory_p,
       std::shared_ptr<mkldnn::memory> bias_memory_p,
       std::shared_ptr<mkldnn::memory> dst_memory_p) {
+    static std::mutex acquire_barrier;
+    std::lock_guard<std::mutex> block_threads_until_finish_this_job(acquire_barrier);
     auto prim_key = key_ + "@conv_p";
     auto conv_p =
         std::static_pointer_cast<forward_t>(dev_ctx_.GetBlob(prim_key));
-    PADDLE_ENFORCE((conv_p != nullptr) || (is_reusing_ == false),
-                   "Fail to find convolution primitive in device context");
     if (conv_p == nullptr) {
       conv_p = std::make_shared<forward_t>(*conv_pd_, *src_memory_p,
                                            *weights_memory_p, *bias_memory_p,
                                            *dst_memory_p);
 
       dev_ctx_.SetBlob(prim_key, conv_p);
-    } else {
-      is_reusing_ = true;
     }
     return conv_p;
   }
@@ -689,20 +667,17 @@ class ConvMKLDNNTemplateHandler : public MKLDNNHandler {
       std::shared_ptr<mkldnn::memory> src_memory_p,
       std::shared_ptr<mkldnn::memory> diff_dst_memory_p,
       std::shared_ptr<mkldnn::memory> diff_weights_memory_p) {
+    static std::mutex acquire_barrier;
+    std::lock_guard<std::mutex> block_threads_until_finish_this_job(acquire_barrier);
     auto prim_key = key_ + "@conv_bwd_weights_p";
     auto conv_bwd_weights_p = std::static_pointer_cast<backward_weights_t>(
         dev_ctx_.GetBlob(prim_key));
-    PADDLE_ENFORCE(
-        (conv_bwd_weights_p != nullptr) || (is_reusing_ == false),
-        "Fail to find convolution bwd weights primitive in device context");
     if (conv_bwd_weights_p == nullptr) {
       // create backward conv primitive for weights
       conv_bwd_weights_p = std::make_shared<backward_weights_t>(
           *conv_bwd_weights_pd_, *src_memory_p, *diff_dst_memory_p,
           *diff_weights_memory_p);
       dev_ctx_.SetBlob(prim_key, conv_bwd_weights_p);
-    } else {
-      is_reusing_ = true;
     }
     return conv_bwd_weights_p;
   }
@@ -711,19 +686,16 @@ class ConvMKLDNNTemplateHandler : public MKLDNNHandler {
       std::shared_ptr<mkldnn::memory> diff_dst_memory_p,
       std::shared_ptr<mkldnn::memory> weights_memory_p,
       std::shared_ptr<mkldnn::memory> diff_src_memory_p) {
+    static std::mutex acquire_barrier;
+    std::lock_guard<std::mutex> block_threads_until_finish_this_job(acquire_barrier);
     auto prim_key = key_ + "@conv_bwd_data_p";
     auto conv_bwd_data_p =
         std::static_pointer_cast<backward_data_t>(dev_ctx_.GetBlob(prim_key));
-    PADDLE_ENFORCE(
-        (conv_bwd_data_p != nullptr) || (is_reusing_ == false),
-        "Fail to find convolution bwd data primitive in device context");
     if (conv_bwd_data_p == nullptr) {
       conv_bwd_data_p = std::make_shared<backward_data_t>(
           *conv_bwd_data_pd_, *diff_dst_memory_p, *weights_memory_p,
           *diff_src_memory_p);
       dev_ctx_.SetBlob(prim_key, conv_bwd_data_p);
-    } else {
-      is_reusing_ = true;
     }
     return conv_bwd_data_p;
   }
