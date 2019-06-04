@@ -240,6 +240,8 @@ std::shared_ptr<FCPrimitiveFactory<T>> GetPrimitiveFactory(
     const MKLDNNDeviceContext& dev_ctx, const ExecutionContext& ctx,
     const Tensor* input, const Tensor* weights,
     const mkldnn::engine& mkldnn_engine) {
+  static std::mutex factory_barrier;
+  std::lock_guard<std::mutex> block_threads_until_finish_this_job(factory_barrier);
   const std::string key = GetHash(input, weights, ctx.op().Output("Out"));
 
   auto prim_creator =
