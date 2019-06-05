@@ -61,17 +61,20 @@ class BatchNormMKLDNNHandler : public platform::MKLDNNHandler {
   std::shared_ptr<batch_norm_fwd::primitive_desc>
   AcquireBatchNormPrimitiveDescriptor(const batch_norm_fwd::desc &bn_fwd_desc,
                                       const mkldnn::engine &engine) {
-    static std::mutex acquire_barrier;
-    std::lock_guard<std::mutex> block_threads_until_finish_this_job(acquire_barrier);
     const std::string key_batch_norm_fwd_pd = key_ + "@bn_fwd_pd";
     auto batch_norm_pd =
         std::static_pointer_cast<batch_norm_fwd::primitive_desc>(
             dev_ctx_.GetBlob(key_batch_norm_fwd_pd));
 
     if (batch_norm_pd == nullptr) {
-      batch_norm_pd_.reset(
-          new batch_norm_fwd::primitive_desc(bn_fwd_desc, engine));
-      dev_ctx_.SetBlob(key_batch_norm_fwd_pd, batch_norm_pd_);
+      static std::mutex acquire_barrier;
+      std::lock_guard<std::mutex> block_threads_until_finish_this_job(acquire_barrier);
+      batch_norm_pd = std::static_pointer_cast<batch_norm_fwd::primitive_desc>(dev_ctx_.GetBlob(key_batch_norm_fwd_pd));
+      if (batch_norm_pd == nullptr) {
+        batch_norm_pd_.reset(
+            new batch_norm_fwd::primitive_desc(bn_fwd_desc, engine));
+        dev_ctx_.SetBlob(key_batch_norm_fwd_pd, batch_norm_pd_);
+      }
     } else {
       batch_norm_pd_ = batch_norm_pd;
     }
@@ -83,25 +86,28 @@ class BatchNormMKLDNNHandler : public platform::MKLDNNHandler {
       std::shared_ptr<memory> scaleshift_memory,
       std::shared_ptr<memory> dst_memory, std::shared_ptr<memory> mean_memory,
       std::shared_ptr<memory> variance_memory, bool is_test) {
-    static std::mutex acquire_barrier;
-    std::lock_guard<std::mutex> block_threads_until_finish_this_job(acquire_barrier);
     auto prim_key = key_ + "@batch_norm_p";
     auto batch_norm_p =
         std::static_pointer_cast<batch_norm_fwd>(dev_ctx_.GetBlob(prim_key));
 
     if (batch_norm_p == nullptr) {
-      if (is_test) {
-        batch_norm_p = std::make_shared<batch_norm_fwd>(
-            *batch_norm_pd_, *src_memory,
-            (const mkldnn::primitive::at &)*mean_memory,
-            (const mkldnn::primitive::at &)*variance_memory, *scaleshift_memory,
-            *dst_memory);
-      } else {
-        batch_norm_p = std::make_shared<batch_norm_fwd>(
-            *batch_norm_pd_, *src_memory, *scaleshift_memory, *dst_memory,
-            *mean_memory, *variance_memory);
+      static std::mutex acquire_barrier;
+      std::lock_guard<std::mutex> block_threads_until_finish_this_job(acquire_barrier);
+      batch_norm_p = std::static_pointer_cast<batch_norm_fwd>(dev_ctx_.GetBlob(prim_key));
+      if (batch_norm_p == nullptr) {
+        if (is_test) {
+          batch_norm_p = std::make_shared<batch_norm_fwd>(
+              *batch_norm_pd_, *src_memory,
+              (const mkldnn::primitive::at &)*mean_memory,
+              (const mkldnn::primitive::at &)*variance_memory, *scaleshift_memory,
+              *dst_memory);
+        } else {
+          batch_norm_p = std::make_shared<batch_norm_fwd>(
+              *batch_norm_pd_, *src_memory, *scaleshift_memory, *dst_memory,
+              *mean_memory, *variance_memory);
+        }
+        dev_ctx_.SetBlob(prim_key, batch_norm_p);
       }
-      dev_ctx_.SetBlob(prim_key, batch_norm_p);
     } 
 
     return batch_norm_p;

@@ -241,14 +241,17 @@ std::shared_ptr<FCPrimitiveFactory<T>> GetPrimitiveFactory(
     const Tensor* input, const Tensor* weights,
     const mkldnn::engine& mkldnn_engine) {
   static std::mutex factory_barrier;
-  std::lock_guard<std::mutex> block_threads_until_finish_this_job(factory_barrier);
-  const std::string key = GetHash(input, weights, ctx.op().Output("Out"));
 
   auto prim_creator =
       std::static_pointer_cast<FCPrimitiveFactory<T>>(dev_ctx.GetBlob(key));
   if (prim_creator == nullptr) {
-    prim_creator = std::make_shared<FCPrimitiveFactory<T>>(mkldnn_engine);
-    dev_ctx.SetBlob(key, prim_creator);
+    std::lock_guard<std::mutex> block_threads_until_finish_this_job(factory_barrier);
+    const std::string key = GetHash(input, weights, ctx.op().Output("Out"));
+    prim_creator = std::static_pointer_cast<FCPrimitiveFactory<T>>(dev_ctx.GetBlob(key));
+    if (prim_creator == nullptr) {
+      prim_creator = std::make_shared<FCPrimitiveFactory<T>>(mkldnn_engine);
+      dev_ctx.SetBlob(key, prim_creator);
+    }
   }
 
   return prim_creator;

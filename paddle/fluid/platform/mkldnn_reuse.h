@@ -69,14 +69,17 @@ class MKLDNNHandler {
   std::shared_ptr<mkldnn::memory> AcquireMemoryFromPrimitive(
       mkldnn::memory::primitive_desc mdp, void* ptr,
       const std::string& suffix) {
-    static std::mutex acquire_barrier;
-    std::lock_guard<std::mutex> block_threads_until_finish_this_job(acquire_barrier);
     auto local_key = key_ + suffix;
     auto mem_p =
         std::static_pointer_cast<mkldnn::memory>(dev_ctx_.GetBlob(local_key));
     if (mem_p == nullptr) {
-      mem_p = std::make_shared<mkldnn::memory>(mdp, ptr);
-      dev_ctx_.SetBlob(local_key, mem_p);
+      static std::mutex acquire_barrier;
+      std::lock_guard<std::mutex> block_threads_until_finish_this_job(acquire_barrier);
+      mem_p = std::static_pointer_cast<mkldnn::memory>(dev_ctx_.GetBlob(local_key));
+      if (mem_p == nullptr) {
+        mem_p = std::make_shared<mkldnn::memory>(mdp, ptr);
+        dev_ctx_.SetBlob(local_key, mem_p);
+      }
     } else {
       mem_p->set_data_handle(ptr);
     }
@@ -88,21 +91,24 @@ class MKLDNNHandler {
   std::shared_ptr<mkldnn::memory> AcquireMemory(
       const mkldnn::memory::desc& md, void* ptr, const std::string& suffix,
       user_function custom_func = {}) {
-    static std::mutex acquire_barrier;
-    std::lock_guard<std::mutex> block_threads_until_finish_this_job(acquire_barrier);
     /*Generate key*/
     auto local_key = key_ + suffix;
     auto mem_p =
         std::static_pointer_cast<mkldnn::memory>(dev_ctx_.GetBlob(local_key));
     if (mem_p == nullptr) {
-      if (custom_func) {
-        auto reordered_data = custom_func(reinterpret_cast<const float*>(ptr));
-        dev_ctx_.SetBlob(local_key + "-custom_reorder", reordered_data);
-        ptr = reinterpret_cast<void*>(reordered_data.get());
+      static std::mutex acquire_barrier;
+      std::lock_guard<std::mutex> block_threads_until_finish_this_job(acquire_barrier);
+      mem_p = std::static_pointer_cast<mkldnn::memory>(dev_ctx_.GetBlob(local_key));
+      if (mem_p == nullptr) {
+        if (custom_func) {
+          auto reordered_data = custom_func(reinterpret_cast<const float*>(ptr));
+          dev_ctx_.SetBlob(local_key + "-custom_reorder", reordered_data);
+          ptr = reinterpret_cast<void*>(reordered_data.get());
+        }
+        mem_p = std::make_shared<mkldnn::memory>(
+            mkldnn::memory::primitive_desc{md, engine_}, ptr);
+        dev_ctx_.SetBlob(local_key, mem_p);
       }
-      mem_p = std::make_shared<mkldnn::memory>(
-          mkldnn::memory::primitive_desc{md, engine_}, ptr);
-      dev_ctx_.SetBlob(local_key, mem_p);
     } else {
       mem_p->set_data_handle(ptr);
     }
@@ -114,8 +120,6 @@ class MKLDNNHandler {
       const std::shared_ptr<mkldnn::memory>& target_memory_p,
       const std::string& suffix,
       std::vector<mkldnn::primitive>& pipeline) {  // NOLINT
-    static std::mutex acquire_barrier;
-    std::lock_guard<std::mutex> block_threads_until_finish_this_job(acquire_barrier);
     auto key_reorder_p = key_ + suffix + "reorder_p";
 
     auto stored_reorder_p = std::static_pointer_cast<mkldnn::reorder>(
@@ -124,10 +128,17 @@ class MKLDNNHandler {
     if (stored_reorder_p) {
       pipeline.push_back(*stored_reorder_p);
     } else {
-      auto reorder_p =
-          std::make_shared<mkldnn::reorder>(*user_memory_p, *target_memory_p);
-      dev_ctx_.SetBlob(key_reorder_p, reorder_p);
-      pipeline.push_back(*reorder_p);
+      static std::mutex acquire_barrier;
+      std::lock_guard<std::mutex> block_threads_until_finish_this_job(acquire_barrier);
+      stored_reorder_p = std::static_pointer_cast<mkldnn::reorder>(dev_ctx_.GetBlob(key_reorder_p));
+      if(stored_reorder_p == nullptr) {
+        auto reorder_p =
+            std::make_shared<mkldnn::reorder>(*user_memory_p, *target_memory_p);
+        dev_ctx_.SetBlob(key_reorder_p, reorder_p);
+        pipeline.push_back(*reorder_p);
+      } else {
+        pipeline.push_back(*stored_reorder_p);
+      }
     }
 
     return target_memory_p;
@@ -142,36 +153,39 @@ class MKLDNNHandler {
       bool is_persistent = false, bool is_INT8 = false,
       std::vector<float> scale_data = {1.0f}, int mask = 0) {
     // create reorder primitive if the input format is not the preferred one
-    static std::mutex acquire_barrier;
-    std::lock_guard<std::mutex> block_threads_until_finish_this_job(acquire_barrier);
     auto local_key = key_ + suffix;
     auto key_reorder_p = key_ + suffix + "reorder_p";
 
     auto target_memory_p =
         std::static_pointer_cast<mkldnn::memory>(dev_ctx_.GetBlob(local_key));
     if (target_memory_p == nullptr) {
-      target_memory_p = user_memory_p;
-      std::shared_ptr<mkldnn::primitive> reorder_p;
-      if (mpd != user_mpd) {
-        target_memory_p = std::make_shared<mkldnn::memory>(mpd);
-        std::shared_ptr<mkldnn::reorder> reorder_p;
-        if (is_INT8) {
-          mkldnn::primitive_attr
-              attri;  // attribute for int8 weights and bias data reorder.
-          attri.set_output_scales(mask, scale_data);
+      static std::mutex acquire_barrier;
+      std::lock_guard<std::mutex> block_threads_until_finish_this_job(acquire_barrier);
+      target_memory_p = std::static_pointer_cast<mkldnn::memory>(dev_ctx_.GetBlob(local_key));
+      if(target_memory_p == nullptr) {
+        target_memory_p = user_memory_p;
+        std::shared_ptr<mkldnn::primitive> reorder_p;
+        if (mpd != user_mpd) {
+          target_memory_p = std::make_shared<mkldnn::memory>(mpd);
+          std::shared_ptr<mkldnn::reorder> reorder_p;
+          if (is_INT8) {
+            mkldnn::primitive_attr
+                attri;  // attribute for int8 weights and bias data reorder.
+            attri.set_output_scales(mask, scale_data);
 
-          auto reorder_pd = std::shared_ptr<mkldnn::reorder::primitive_desc>(
-              new mkldnn::reorder::primitive_desc(user_mpd, mpd, attri));
-          reorder_p = std::shared_ptr<mkldnn::reorder>(new mkldnn::reorder(
-              *reorder_pd, *user_memory_p, *target_memory_p));
-        } else {
-          reorder_p = std::make_shared<mkldnn::reorder>(*user_memory_p,
-                                                        *target_memory_p);
+            auto reorder_pd = std::shared_ptr<mkldnn::reorder::primitive_desc>(
+                new mkldnn::reorder::primitive_desc(user_mpd, mpd, attri));
+            reorder_p = std::shared_ptr<mkldnn::reorder>(new mkldnn::reorder(
+                *reorder_pd, *user_memory_p, *target_memory_p));
+          } else {
+            reorder_p = std::make_shared<mkldnn::reorder>(*user_memory_p,
+                                                          *target_memory_p);
+          }
+          dev_ctx_.SetBlob(key_reorder_p, reorder_p);
+          pipeline.push_back(*reorder_p);
         }
-        dev_ctx_.SetBlob(key_reorder_p, reorder_p);
-        pipeline.push_back(*reorder_p);
+        dev_ctx_.SetBlob(local_key, target_memory_p);
       }
-      dev_ctx_.SetBlob(local_key, target_memory_p);
     } else if (!is_persistent) {
       // Make reorder if needed
       auto reorder_p = std::static_pointer_cast<mkldnn::reorder>(
@@ -277,24 +291,28 @@ class TransposeMKLDNNHandler : public MKLDNNHandler {
 
   std::shared_ptr<mkldnn::memory> AcquireSrcMemory(
       const mkldnn::memory::format& fmt, void* ptr) {
-    static std::mutex acquire_barrier;
-    std::lock_guard<std::mutex> block_threads_until_finish_this_job(acquire_barrier);
     auto local_key = key_ + "@user_src_mem_p";
     auto mem_p =
         std::static_pointer_cast<mkldnn::memory>(dev_ctx_.GetBlob(local_key));
     if (mem_p == nullptr) {
-      // Make memory descriptor using input format, unless it
-      // cannot be trusted (nchw) then make up memory fmt manually
-      for (size_t i = 0; i < logical_axis_.size(); ++i) {
-        logical_axis_[i] = i;
+      static std::mutex acquire_barrier;
+      std::lock_guard<std::mutex> block_threads_until_finish_this_job(acquire_barrier);
+      mem_p =
+        std::static_pointer_cast<mkldnn::memory>(dev_ctx_.GetBlob(local_key));
+      if (mem_p == nullptr) {
+        // Make memory descriptor using input format, unless it
+        // cannot be trusted (nchw) then make up memory fmt manually
+        for (size_t i = 0; i < logical_axis_.size(); ++i) {
+          logical_axis_[i] = i;
+        }
+        auto src_md = fmt != mkldnn::memory::format::nchw
+                          ? platform::MKLDNNMemDesc(
+                                dims_, platform::MKLDNNGetDataType<float>(), fmt)
+                          : Axis2MemoryDesc(dims_, logical_axis_);
+        mem_p = std::make_shared<mkldnn::memory>(
+            mkldnn::memory::primitive_desc{src_md, engine_}, ptr);
+        dev_ctx_.SetBlob(local_key, mem_p);
       }
-      auto src_md = fmt != mkldnn::memory::format::nchw
-                        ? platform::MKLDNNMemDesc(
-                              dims_, platform::MKLDNNGetDataType<float>(), fmt)
-                        : Axis2MemoryDesc(dims_, logical_axis_);
-      mem_p = std::make_shared<mkldnn::memory>(
-          mkldnn::memory::primitive_desc{src_md, engine_}, ptr);
-      dev_ctx_.SetBlob(local_key, mem_p);
     } else {
       mem_p->set_data_handle(ptr);
     }
@@ -304,19 +322,22 @@ class TransposeMKLDNNHandler : public MKLDNNHandler {
   std::shared_ptr<mkldnn::memory> AcquireDstMemory(framework::Tensor* output,
                                                    platform::Place place) {
     auto local_key = key_ + "@user_dst_mem_p";
-    static std::mutex acquire_barrier;
-    std::lock_guard<std::mutex> block_threads_until_finish_this_job(acquire_barrier);
     auto mem_p =
         std::static_pointer_cast<mkldnn::memory>(dev_ctx_.GetBlob(local_key));
     if (mem_p == nullptr) {
-      auto dst_mdp = mkldnn::memory::primitive_desc{
-          Axis2MemoryDesc(dims_, axis_), engine_};
+      static std::mutex acquire_barrier;
+      std::lock_guard<std::mutex> block_threads_until_finish_this_job(acquire_barrier);
+      mem_p = std::static_pointer_cast<mkldnn::memory>(dev_ctx_.GetBlob(local_key));
+      if (mem_p == nullptr) {
+        auto dst_mdp = mkldnn::memory::primitive_desc{
+            Axis2MemoryDesc(dims_, axis_), engine_};
 
-      auto dst_data = output->mutable_data<float>(
-          place, paddle::memory::Allocator::kDefault, dst_mdp.get_size());
+        auto dst_data = output->mutable_data<float>(
+            place, paddle::memory::Allocator::kDefault, dst_mdp.get_size());
 
-      mem_p = std::make_shared<mkldnn::memory>(dst_mdp, dst_data);
-      dev_ctx_.SetBlob(local_key, mem_p);
+        mem_p = std::make_shared<mkldnn::memory>(dst_mdp, dst_data);
+        dev_ctx_.SetBlob(local_key, mem_p);
+      }
     } else {
       auto dst_data = output->mutable_data<float>(place);
       mem_p->set_data_handle(dst_data);
@@ -327,15 +348,21 @@ class TransposeMKLDNNHandler : public MKLDNNHandler {
   std::shared_ptr<mkldnn::reorder> AcquireTranspose(
       std::shared_ptr<mkldnn::memory> dst_memory_p,
       std::shared_ptr<mkldnn::memory> src_memory_p) {
-    static std::mutex acquire_barrier;
-    std::lock_guard<std::mutex> block_threads_until_finish_this_job(acquire_barrier);
     auto prim_key = key_ + "@transpose_p";
     auto transpose_p =
         std::static_pointer_cast<mkldnn::reorder>(dev_ctx_.GetBlob(prim_key));
     if (transpose_p == nullptr) {
+      static std::mutex acquire_barrier;
+      std::lock_guard<std::mutex> block_threads_until_finish_this_job(acquire_barrier);
       transpose_p =
-          std::make_shared<mkldnn::reorder>(*(src_memory_p), *(dst_memory_p));
-      dev_ctx_.SetBlob(prim_key, transpose_p);
+        std::static_pointer_cast<mkldnn::reorder>(dev_ctx_.GetBlob(prim_key));
+      // Check again if still no Primitive is there but this time
+      // within critical section 
+      if (transpose_p == nullptr) {
+        transpose_p =
+            std::make_shared<mkldnn::reorder>(*(src_memory_p), *(dst_memory_p));
+        dev_ctx_.SetBlob(prim_key, transpose_p);
+      }
     } 
     return transpose_p;
   }
@@ -591,54 +618,60 @@ class ConvMKLDNNTemplateHandler : public MKLDNNHandler {
       const bool fuse_relu, const bool fuse_residual_conn,
       const bool fuse_brelu, const float fuse_brelu_threshold,
       mkldnn::prop_kind fwd_prop_kind) {
-    static std::mutex acquire_barrier;
-    std::lock_guard<std::mutex> block_threads_until_finish_this_job(acquire_barrier);
     const std::string key_conv_pd = key_ + "@conv_pd";
 
     auto conv_pd = std::static_pointer_cast<typename forward_t::primitive_desc>(
         dev_ctx_.GetBlob(key_conv_pd));
 
     if (conv_pd == nullptr) {
-      mkldnn::memory::dims stride_dims = strides;
-      mkldnn::memory::dims padding_dims = paddings;
+      static std::mutex acquire_barrier;
+      std::lock_guard<std::mutex> block_threads_until_finish_this_job(acquire_barrier);
+      conv_pd = std::static_pointer_cast<typename forward_t::primitive_desc>(dev_ctx_.GetBlob(key_conv_pd)); 
+      if(conv_pd == nullptr) {
+        mkldnn::memory::dims stride_dims = strides;
+        mkldnn::memory::dims padding_dims = paddings;
 
-      auto conv_desc =
-          bias ? typename forward_t::desc(
-                     fwd_prop_kind, convolutional_algorithm<forward_t>::T, src,
-                     weights, *bias, dst, stride_dims, padding_dims,
-                     padding_dims, mkldnn::padding_kind::zero)
-               : typename forward_t::desc(
-                     fwd_prop_kind, convolutional_algorithm<forward_t>::T, src,
-                     weights, dst, stride_dims, padding_dims, padding_dims,
-                     mkldnn::padding_kind::zero);
+        auto conv_desc =
+            bias ? typename forward_t::desc(
+                       fwd_prop_kind, convolutional_algorithm<forward_t>::T, src,
+                       weights, *bias, dst, stride_dims, padding_dims,
+                       padding_dims, mkldnn::padding_kind::zero)
+                 : typename forward_t::desc(
+                       fwd_prop_kind, convolutional_algorithm<forward_t>::T, src,
+                       weights, dst, stride_dims, padding_dims, padding_dims,
+                       mkldnn::padding_kind::zero);
 
-      mkldnn::primitive_attr conv_attr = CreatePostOps(
-          fuse_relu, fuse_residual_conn, fuse_brelu, fuse_brelu_threshold);
+        mkldnn::primitive_attr conv_attr = CreatePostOps(
+            fuse_relu, fuse_residual_conn, fuse_brelu, fuse_brelu_threshold);
 
-      conv_pd_.reset(
-          new typename forward_t::primitive_desc(conv_desc, conv_attr, engine));
-      // Save conv_pd/src_memory/weights_memory for backward pass
-      dev_ctx_.SetBlob(key_conv_pd, conv_pd_);
+        conv_pd_.reset(
+            new typename forward_t::primitive_desc(conv_desc, conv_attr, engine));
+        // Save conv_pd/src_memory/weights_memory for backward pass
+        dev_ctx_.SetBlob(key_conv_pd, conv_pd_);
+      }
     } else {
       conv_pd_ = conv_pd;
     }
 
     return conv_pd_;
   }
-
+  //TODO(jczaja): combine next two functions into one using boost optional for bias_memory_p
   std::shared_ptr<forward_t> AcquireConvolution(
       std::shared_ptr<mkldnn::memory> src_memory_p,
       std::shared_ptr<mkldnn::memory> weights_memory_p,
       std::shared_ptr<mkldnn::memory> dst_memory_p) {
-    static std::mutex acquire_barrier;
-    std::lock_guard<std::mutex> block_threads_until_finish_this_job(acquire_barrier);
     auto prim_key = key_ + "@conv_p";
     auto conv_p =
         std::static_pointer_cast<forward_t>(dev_ctx_.GetBlob(prim_key));
     if (conv_p == nullptr) {
-      conv_p = std::make_shared<forward_t>(*conv_pd_, *src_memory_p,
-                                           *weights_memory_p, *dst_memory_p);
-      dev_ctx_.SetBlob(prim_key, conv_p);
+      static std::mutex acquire_barrier;
+      std::lock_guard<std::mutex> block_threads_until_finish_this_job(acquire_barrier);
+      conv_p = std::static_pointer_cast<forward_t>(dev_ctx_.GetBlob(prim_key));
+      if (conv_p == nullptr) {
+        conv_p = std::make_shared<forward_t>(*conv_pd_, *src_memory_p,
+                                             *weights_memory_p, *dst_memory_p);
+        dev_ctx_.SetBlob(prim_key, conv_p);
+      }
     }
     return conv_p;
   }
@@ -648,17 +681,19 @@ class ConvMKLDNNTemplateHandler : public MKLDNNHandler {
       std::shared_ptr<mkldnn::memory> weights_memory_p,
       std::shared_ptr<mkldnn::memory> bias_memory_p,
       std::shared_ptr<mkldnn::memory> dst_memory_p) {
-    static std::mutex acquire_barrier;
-    std::lock_guard<std::mutex> block_threads_until_finish_this_job(acquire_barrier);
     auto prim_key = key_ + "@conv_p";
     auto conv_p =
         std::static_pointer_cast<forward_t>(dev_ctx_.GetBlob(prim_key));
     if (conv_p == nullptr) {
-      conv_p = std::make_shared<forward_t>(*conv_pd_, *src_memory_p,
-                                           *weights_memory_p, *bias_memory_p,
-                                           *dst_memory_p);
-
-      dev_ctx_.SetBlob(prim_key, conv_p);
+      static std::mutex acquire_barrier;
+      std::lock_guard<std::mutex> block_threads_until_finish_this_job(acquire_barrier);
+    conv_p = std::static_pointer_cast<forward_t>(dev_ctx_.GetBlob(prim_key));
+      if (conv_p == nullptr) {
+        conv_p = std::make_shared<forward_t>(*conv_pd_, *src_memory_p,
+                                             *weights_memory_p, *bias_memory_p,
+                                             *dst_memory_p);
+        dev_ctx_.SetBlob(prim_key, conv_p);
+      }
     }
     return conv_p;
   }
@@ -667,17 +702,21 @@ class ConvMKLDNNTemplateHandler : public MKLDNNHandler {
       std::shared_ptr<mkldnn::memory> src_memory_p,
       std::shared_ptr<mkldnn::memory> diff_dst_memory_p,
       std::shared_ptr<mkldnn::memory> diff_weights_memory_p) {
-    static std::mutex acquire_barrier;
-    std::lock_guard<std::mutex> block_threads_until_finish_this_job(acquire_barrier);
     auto prim_key = key_ + "@conv_bwd_weights_p";
     auto conv_bwd_weights_p = std::static_pointer_cast<backward_weights_t>(
         dev_ctx_.GetBlob(prim_key));
     if (conv_bwd_weights_p == nullptr) {
-      // create backward conv primitive for weights
-      conv_bwd_weights_p = std::make_shared<backward_weights_t>(
-          *conv_bwd_weights_pd_, *src_memory_p, *diff_dst_memory_p,
-          *diff_weights_memory_p);
-      dev_ctx_.SetBlob(prim_key, conv_bwd_weights_p);
+      static std::mutex acquire_barrier;
+      std::lock_guard<std::mutex> block_threads_until_finish_this_job(acquire_barrier);
+      conv_bwd_weights_p = std::static_pointer_cast<backward_weights_t>(
+        dev_ctx_.GetBlob(prim_key));
+      if (conv_bwd_weights_p == nullptr) {
+        // create backward conv primitive for weights
+        conv_bwd_weights_p = std::make_shared<backward_weights_t>(
+            *conv_bwd_weights_pd_, *src_memory_p, *diff_dst_memory_p,
+            *diff_weights_memory_p);
+        dev_ctx_.SetBlob(prim_key, conv_bwd_weights_p);
+      }
     }
     return conv_bwd_weights_p;
   }
@@ -686,16 +725,20 @@ class ConvMKLDNNTemplateHandler : public MKLDNNHandler {
       std::shared_ptr<mkldnn::memory> diff_dst_memory_p,
       std::shared_ptr<mkldnn::memory> weights_memory_p,
       std::shared_ptr<mkldnn::memory> diff_src_memory_p) {
-    static std::mutex acquire_barrier;
-    std::lock_guard<std::mutex> block_threads_until_finish_this_job(acquire_barrier);
     auto prim_key = key_ + "@conv_bwd_data_p";
     auto conv_bwd_data_p =
         std::static_pointer_cast<backward_data_t>(dev_ctx_.GetBlob(prim_key));
     if (conv_bwd_data_p == nullptr) {
-      conv_bwd_data_p = std::make_shared<backward_data_t>(
-          *conv_bwd_data_pd_, *diff_dst_memory_p, *weights_memory_p,
-          *diff_src_memory_p);
-      dev_ctx_.SetBlob(prim_key, conv_bwd_data_p);
+      static std::mutex acquire_barrier;
+      std::lock_guard<std::mutex> block_threads_until_finish_this_job(acquire_barrier);
+      conv_bwd_data_p =
+        std::static_pointer_cast<backward_data_t>(dev_ctx_.GetBlob(prim_key));
+      if (conv_bwd_data_p == nullptr) {
+        conv_bwd_data_p = std::make_shared<backward_data_t>(
+            *conv_bwd_data_pd_, *diff_dst_memory_p, *weights_memory_p,
+            *diff_src_memory_p);
+        dev_ctx_.SetBlob(prim_key, conv_bwd_data_p);
+      }
     }
     return conv_bwd_data_p;
   }
