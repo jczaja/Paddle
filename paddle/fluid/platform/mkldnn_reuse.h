@@ -27,6 +27,26 @@ namespace platform {
 
 using user_function = std::function<std::shared_ptr<float>(const float*)>;
 
+enum { AMFP, Fun2, Fun3 };
+
+template<int n>
+struct GuardExecution {  
+
+  template<class P,class F>
+  static std::shared_ptr<mkldnn::memory> Run(F f, const MKLDNNDeviceContext& dev_ctx, std::string& key) {
+      static std::mutex gebarrier;
+      std::lock_guard<std::mutex> block_threads_until_finish_this_job(gebarrier);
+
+      auto entity = std::static_pointer_cast<P>(dev_ctx.GetBlob(key));
+      // entity is primitive we are to get
+      if (entity == nullptr) {
+        entity = f(dev_ctx, key);
+      }
+      PADDLE_ENFORCE(entity != nullptr);
+      return entity;
+  }
+};
+
 class MKLDNNHandler {
  public:
   MKLDNNHandler(const MKLDNNDeviceContext& dev_ctx, mkldnn::engine engine,
@@ -73,13 +93,14 @@ class MKLDNNHandler {
     auto mem_p =
         std::static_pointer_cast<mkldnn::memory>(dev_ctx_.GetBlob(local_key));
     if (mem_p == nullptr) {
-      static std::mutex acquire_barrier;
-      std::lock_guard<std::mutex> block_threads_until_finish_this_job(acquire_barrier);
-      mem_p = std::static_pointer_cast<mkldnn::memory>(dev_ctx_.GetBlob(local_key));
-      if (mem_p == nullptr) {
-        mem_p = std::make_shared<mkldnn::memory>(mdp, ptr);
-        dev_ctx_.SetBlob(local_key, mem_p);
-      }
+
+      mem_p = GuardExecution<AMFP>::Run<mkldnn::memory>([&mdp,&ptr](const MKLDNNDeviceContext& dev_ctx, std::string& key)
+      {                
+        auto mem_prim = std::make_shared<mkldnn::memory>(mdp, ptr);
+        dev_ctx.SetBlob(key, mem_prim);
+        return mem_prim;
+      }, dev_ctx_, local_key);
+
     } else {
       mem_p->set_data_handle(ptr);
     }
