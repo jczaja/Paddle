@@ -82,6 +82,7 @@ void compare(bool use_mkldnn = false) {
   AnalysisConfig cfg;
   SetConfig(&cfg);
   if (use_mkldnn) {
+    cfg.SetMkldnnThreadID(0);
     cfg.EnableMKLDNN();
     if (!FLAGS_disable_mkldnn_fc)
       cfg.pass_builder()->AppendPass("fc_mkldnn_pass");
