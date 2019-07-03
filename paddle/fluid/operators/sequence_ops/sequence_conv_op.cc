@@ -211,7 +211,7 @@ class SequenceConvGradNoNeedBufferVarsInference
     if (!boost::get<bool>(Attrs().at("paddingTrainable"))) {
       return {"PaddingData"};
     } else {
-      return {};
+      return std::unordered_set<std::string>();
     }
   }
 };

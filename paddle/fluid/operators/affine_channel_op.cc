@@ -311,7 +311,7 @@ class AffineChannelNoNeedBufferVarsInference
         !HasInput(framework::GradVarName("Bias"))) {
       return {"X"};
     } else {
-      return {};
+      return std::unordered_set<std::string>();
     }
   }
 };
