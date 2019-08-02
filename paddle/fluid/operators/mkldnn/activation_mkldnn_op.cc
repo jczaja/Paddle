@@ -87,7 +87,6 @@ void eltwise_forward(const framework::ExecutionContext &ctx,
   auto *y = ctx.Output<Tensor>("Out");
 
   const T *x_data = x->data<T>();
-  T *y_data = y->mutable_data<T>(ctx.GetPlace());
 
   const T alpha = ctx.op().HasAttr("alpha") ? ctx.Attr<T>("alpha") : 0;
   const T beta = ctx.op().HasAttr("beta") ? ctx.Attr<T>("beta") : 0;
@@ -118,6 +117,8 @@ void eltwise_forward(const framework::ExecutionContext &ctx,
 
   auto src_memory_p = handler.AcquireSrcMemory(md, to_void_cast<T>(x_data));
 
+  // TODO(jczaja): Make it much better e.g. cover with function
+  T *y_data = y->mutable_data<T>(ctx.GetPlace(), activation_pd->dst_primitive_desc().get_size());
   auto dst_memory_p =
       handler.AcquireDstMemoryFromPrimitive(to_void_cast<T>(y_data));
   auto activation_p = handler.AcquireActivation(dst_memory_p, src_memory_p);
