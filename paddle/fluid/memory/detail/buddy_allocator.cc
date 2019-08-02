@@ -59,9 +59,13 @@ inline size_t align(size_t size, size_t alignment) {
 }
 
 void* BuddyAllocator::Alloc(size_t unaligned_size) {
+
+
   // adjust allocation alignment
   size_t size =
       align(unaligned_size + sizeof(MemoryBlock::Desc), min_chunk_size_);
+
+  VLOG(10) << "=> Alloc of size=" << size << " pool's size=" << pool_.size() << std::endl;
 
   // acquire the allocator lock
   std::lock_guard<std::mutex> lock(mutex_);
@@ -284,6 +288,9 @@ void* BuddyAllocator::SplitToAlloc(BuddyAllocator::PoolSet::iterator it,
                            block->right_buddy(cache_)));
     }
   }
+
+
+  VLOG(10) << "<== Alloc of size=" << size << " pool's size=" << pool_.size() << std::endl;
 
   return block;
 }
