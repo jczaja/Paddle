@@ -405,7 +405,7 @@ class ActivationMKLDNNHandler : public MKLDNNHandler {
   std::shared_ptr<mkldnn::memory> AcquireDstMemoryFromPrimitive(
       framework::Tensor* output, platform::Place place) {
     T* ptr =
-        output->mutable_data<T>(place, fwd_pd->dst_primitive_desc().get_size());
+        output->mutable_data<T>(place, fwd_pd_->dst_primitive_desc().get_size());
     return this->AcquireMemoryFromPrimitive(fwd_pd_->dst_primitive_desc(), ptr,
                                             "@dst_mem_p");
   }
