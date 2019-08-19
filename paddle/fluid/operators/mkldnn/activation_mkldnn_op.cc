@@ -117,10 +117,7 @@ void eltwise_forward(const framework::ExecutionContext &ctx,
 
   auto src_memory_p = handler.AcquireSrcMemory(md, to_void_cast<T>(x_data));
 
-  // TODO(jczaja): Make it much better e.g. cover with function
-  T *y_data = y->mutable_data<T>(ctx.GetPlace(), activation_pd->dst_primitive_desc().get_size());
-  auto dst_memory_p =
-      handler.AcquireDstMemoryFromPrimitive(to_void_cast<T>(y_data));
+  auto dst_memory_p = handler.AcquireDstMemoryFromPrimitive(y, ctx.Place());
   auto activation_p = handler.AcquireActivation(dst_memory_p, src_memory_p);
 
   // push primitive to stream and wait until it's executed
