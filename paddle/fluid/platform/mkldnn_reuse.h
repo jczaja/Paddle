@@ -226,8 +226,9 @@ class MKLDNNHandler {
         std::hash<std::thread::id>()(std::this_thread::get_id()));
   }
 
-  static std::string GetHash(mkldnn::memory::dims& operand_dims,  // NOLINT
-                             const std::string& suffix) {
+  static std::string GetHash(
+      const mkldnn::memory::dims& operand_dims,  // NOLINT
+      const std::string& suffix) {
     return dims2str(operand_dims) + suffix;
   }
 
