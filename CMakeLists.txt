@@ -69,6 +69,7 @@ option(WITH_BRPC_RDMA     "Use brpc rdma as the rpc protocal"           OFF)
 option(ON_INFER         "Turn on inference optimization."               OFF)
 ################################ Internal Configurations #######################################
 option(WITH_AMD_GPU     "Compile PaddlePaddle with AMD GPU"             OFF)
+option(WITH_CALLGRAPH   "Compile PaddlePaddle with callgraph"           OFF)
 option(WITH_NGRAPH      "Compile PaddlePaddle with nGraph support."     OFF)
 option(WITH_PROFILER    "Compile PaddlePaddle with GPU profiler and gperftools"        OFF)
 option(WITH_COVERAGE    "Compile PaddlePaddle with code coverage"       OFF)
@@ -138,6 +139,7 @@ if (SANITIZER_TYPE AND NOT "${SANITIZER_TYPE}" MATCHES "^(Address|Leak|Memory|Th
 endif()
 
 ########################################################################################
+
 
 include(external/mklml)     # download mklml package
 include(external/xbyak)     # download xbyak package
@@ -243,6 +245,13 @@ set(PADDLE_PYTHON_BUILD_DIR "${CMAKE_CURRENT_BINARY_DIR}/python/build")
 
 set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O3 -g -DNDEBUG")
 set(CMAKE_C_FLAGS_RELWITHDEBINFO "-O3 -g -DNDEBUG")
+
+
+if(WITH_CALLGRAPH)
+include(cmake/callgraph.cmake)
+make_callgraph("Compute Acquire SoftmaxMKLDNNHandler" ${CMAKE_CURRENT_SOURCE_DIR}/paddle/fluid/operators/mkldnn/softmax_mkldnn_op.cc)
+endif(WITH_CALLGRAPH)
+
 
 if (ON_INFER)
     message(STATUS "On inference mode, will take place some specific optimization.")
