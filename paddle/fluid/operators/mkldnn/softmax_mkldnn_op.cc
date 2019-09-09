@@ -72,7 +72,7 @@ class SoftmaxMKLDNNHandler : public platform::MKLDNNHandler {
   std::shared_ptr<mkldnn::memory> AcquireSrcMemory(const Tensor* input) {
     const T* input_data = input->data<T>();
     return this->AcquireMemoryFromPrimitive(fwd_pd_->src_primitive_desc(),
-                                            const_cast<T*>(input_data),
+                                            to_void_cast<T>(input_data),
                                             "@src_mem_p");
   }
 
@@ -80,21 +80,21 @@ class SoftmaxMKLDNNHandler : public platform::MKLDNNHandler {
   std::shared_ptr<mkldnn::memory> AcquireDstMemory(framework::Tensor* output) {
     T* ptr = output->mutable_data<T>(place_,
                                      fwd_pd_->dst_primitive_desc().get_size());
-    return this->AcquireMemoryFromPrimitive(fwd_pd_->dst_primitive_desc(),
-                                            const_cast<T*>(ptr), "@dst_mem_p");
+    return this->AcquireMemoryFromPrimitive(fwd_pd_->dst_primitive_desc(), ptr,
+                                            "@dst_mem_p");
   }
 
   std::shared_ptr<mkldnn::memory> AcquireDstMemory(const Tensor* output) {
     const T* output_data = output->data<T>();
     return this->AcquireMemoryFromPrimitive(bwd_pd_->dst_primitive_desc(),
-                                            const_cast<T*>(output_data),
+                                            to_void_cast<T>(output_data),
                                             "@dst_mem_p");
   }
 
   std::shared_ptr<mkldnn::memory> AcquireDiffDstMemory(const Tensor* diffdst) {
     const T* ptr = diffdst->data<T>();
     return this->AcquireMemoryFromPrimitive(bwd_pd_->diff_dst_primitive_desc(),
-                                            const_cast<T*>(ptr),
+                                            to_void_cast<T>(ptr),
                                             "@diff_dst_mem_p");
   }
 
