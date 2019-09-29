@@ -56,8 +56,10 @@ class Executor {
   explicit Executor(const platform::DeviceContext& device)
       : Executor(device.GetPlace()) {}
 
-  explicit Executor(const platform::Place& place);
+  explicit Executor(const platform::Place& place,
+                    bool clear_mkldnn_cache = true);
 
+  ~Executor();
   /*
    * Close this Executor.
    * Calling this method will send complete messages to all pserver instances.
@@ -127,6 +129,7 @@ class Executor {
 
  private:
   const platform::Place place_;
+  const bool clear_mkldnn_cache_;
 };
 
 }  // namespace framework
