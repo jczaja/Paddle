@@ -104,7 +104,8 @@ class ConcatPrimitiveFactory {
                                  Tensor* output,
                                  const platform::CPUPlace& place) {
     return memory(concat_pd.dst_primitive_desc(),
-                  output->mutable_data<T>(place));
+                  output->mutable_data<T>(place, 
+                     concat_pd.dst_primitive_desc().get_size()));
   }
 
   void CreateSourcesDescriptors(const std::vector<const Tensor*> multi_input,
