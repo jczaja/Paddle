@@ -81,6 +81,16 @@ class FCOpKernel : public framework::OpKernel<T> {
     math::FCFunctor<DeviceContext, T> fc;
     fc(dev_ctx, M, w_dims[1], w_dims[0], input_data, w_data, output_data,
        bias ? bias->data<T>() : NULL, with_relu);
+
+
+    std::cout << "<<<< FC " << std::endl;
+    input->Print<T>(std::string("Input: ") + ctx.op().Input("Input"), mkldnn::engine(mkldnn::engine::cpu, 0));
+    w->Print<T>("Weights: " + ctx.op().Input("W"), mkldnn::engine(mkldnn::engine::cpu, 0));
+    bias->Print<T>("Bias: " + ctx.op().Input("Bias"), mkldnn::engine(mkldnn::engine::cpu, 0));
+    output->Print<T>("Output: " + ctx.op().Output("Out"), mkldnn::engine(mkldnn::engine::cpu, 0));
+    std::cout << ">>>> FC  " << std::endl;
+
+
   }
 };
 

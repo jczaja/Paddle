@@ -261,6 +261,14 @@ class FCMKLDNNOpKernel : public framework::OpKernel<T> {
     stream(stream::kind::eager).submit({fc}).wait();
 
     output->set_layout(DataLayout::kMKLDNN);
+    std::cout << "<<<< FC MKL-DNN " << std::endl;
+    input->Print<T>(std::string("Input: ") + ctx.op().Input("Input"), mkldnn_engine);
+    w->Print<T>("Weights: " + ctx.op().Input("W"), mkldnn_engine);
+    bias->Print<T>("Bias: " + ctx.op().Input("Bias") , mkldnn_engine);
+    output->Print<T>("Output: " + ctx.op().Output("Out"), mkldnn_engine);
+    std::cout << ">>>> FC MKL-DNN " << std::endl;
+
+
   }
 };
 }  // namespace operators
