@@ -48,19 +48,21 @@ static void ReorderInput(framework::Tensor* tensor,
                          const platform::Place& place,
                          const mkldnn::engine& engine, bool isFourDim) {
   using platform::to_void_cast;
-  auto dims = paddle::framework::vectorize<int>(tensor->dims());
+  auto dims = paddle::framework::vectorize<int64_t>(tensor->dims());
   framework::Tensor out_tensor;
   out_tensor.Resize(tensor->dims());
   out_tensor.set_format(isFourDim ? MKLDNNMemoryFormat::nchw
                                   : MKLDNNMemoryFormat::nc);
   out_tensor.set_layout(tensor->layout());
   mkldnn::memory input_memory = {
-      {{dims, platform::MKLDNNGetDataType<T>(), tensor->format()}, engine},
+      {dims, platform::MKLDNNGetDataType<T>(), tensor->format()},
+      engine,
       to_void_cast<T>(tensor->data<T>())};
   mkldnn::memory output_memory = {
-      {{dims, platform::MKLDNNGetDataType<T>(), out_tensor.format()}, engine},
+      {dims, platform::MKLDNNGetDataType<T>(), out_tensor.format()},
+      engine,
       to_void_cast<T>(out_tensor.mutable_data<T>(place))};
-  platform::Reorder(input_memory, output_memory);
+  platform::Reorder(input_memory, output_memory, engine);
   tensor->ShareDataWith(out_tensor);
 }
 
@@ -80,7 +82,7 @@ class ElementwiseMulMKLDNNKernel : public framework::OpKernel<T> {
 
     auto x_dims = x->dims();
     auto y_dims_untrimmed = y->dims();
-    auto x_int_dims = paddle::framework::vectorize<int>(x_dims);
+    auto x_int_dims = paddle::framework::vectorize<int64_t>(x_dims);
 
     UpdateDataFormat(ctx, const_cast<Tensor*>(x), "x_data_format");
     UpdateDataFormat(ctx, const_cast<Tensor*>(y), "y_data_format");
