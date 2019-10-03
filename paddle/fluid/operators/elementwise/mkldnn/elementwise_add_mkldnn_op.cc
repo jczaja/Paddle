@@ -58,7 +58,7 @@ class EltwiseAddMKLDNNKernel : public framework::OpKernel<T> {
     if (x_dims != y_dims_untrimed) {
       Tensor _x;
       MKLDNNMemoryFormat format;
-      auto src_x_tz = framework::vectorize<int64_t>(x_dims);
+      auto src_x_tz = framework::vectorize(x_dims);
 
       if ((src_x_tz.size() == 3 &&
            x->format() != (format = MKLDNNMemoryFormat::ncw)) ||
@@ -130,9 +130,9 @@ class EltwiseAddMKLDNNKernel : public framework::OpKernel<T> {
       PADDLE_ENFORCE_NE(y->format(), MKLDNNMemoryFormat::undef,
                         "Wrong format set for Y tensor");
 
-      auto src_x_tz = framework::vectorize<int64_t>(x_dims);
-      auto src_y_tz = framework::vectorize<int64_t>(y_dims_untrimed);
-      auto dst_tz = framework::vectorize<int64_t>(z_dims);
+      auto src_x_tz = framework::vectorize(x_dims);
+      auto src_y_tz = framework::vectorize(y_dims_untrimed);
+      auto dst_tz = framework::vectorize(z_dims);
 
       std::vector<float> scales = {1.0f, 1.0f};
 

@@ -87,7 +87,7 @@ class SoftmaxMKLDNNKernel : public paddle::framework::OpKernel<T> {
     auto dims = input->dims();  // input and output share the same shape
     const int axis = CanonicalAxis(ctx.Attr<int>("axis"), dims.size());
 
-    auto softmax_tz = paddle::framework::vectorize<int64_t>(dims);
+    auto softmax_tz = paddle::framework::vectorize(dims);
 
     SoftmaxMKLDNNHandler<T> handler(softmax_tz, input->format(), axis, dev_ctx,
                                     ctx.GetPlace(), ctx.op().Output("Out"));
@@ -135,7 +135,7 @@ class SoftmaxMKLDNNGradKernel : public paddle::framework::OpKernel<T> {
     auto dims = dout->dims();  // input and output share the same shape
     const int axis = CanonicalAxis(ctx.Attr<int>("axis"), dims.size());
 
-    auto softmax_tz = paddle::framework::vectorize<int64_t>(dims);
+    auto softmax_tz = paddle::framework::vectorize(dims);
 
     SoftmaxMKLDNNHandler<T> handler(softmax_tz, output->format(),
                                     dout->format(), axis, dev_ctx,

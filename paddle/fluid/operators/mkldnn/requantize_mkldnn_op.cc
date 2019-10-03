@@ -43,8 +43,8 @@ class ReQuantOpKernel : public framework::OpKernel<T> {
     const auto& engine = dev_ctx.GetEngine();
 
     std::vector<primitive> pipeline;
-    auto src_tz = paddle::framework::vectorize<int64_t>(input->dims());
-    auto dst_tz = paddle::framework::vectorize<int64_t>(output->dims());
+    auto src_tz = paddle::framework::vectorize(input->dims());
+    auto dst_tz = paddle::framework::vectorize(output->dims());
     mkldnn::memory::data_type src_dt =
         paddle::framework::ToMKLDNNDataType(input->type());
     mkldnn::memory::data_type dst_dt = src_dt;

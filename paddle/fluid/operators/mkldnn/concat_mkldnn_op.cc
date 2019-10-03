@@ -39,7 +39,7 @@ static void EnforceLayouts(const std::vector<const Tensor*> inputs) {
 
 static memory::desc CreateMemDesc(const Tensor& input,
                                   const memory::data_type& dt) {
-  const auto dims = paddle::framework::vectorize<int64_t>(input.dims());
+  const auto dims = paddle::framework::vectorize(input.dims());
   const auto format = input.format();
   auto mem_desc = memory::desc(dims, dt, format);
   return mem_desc;
@@ -95,7 +95,7 @@ class ConcatPrimitiveFactory {
  private:
   memory::desc CreateDstMemDescriptor(Tensor* output,
                                       const memory::data_type& dt) {
-    auto dst_dims = paddle::framework::vectorize<int64_t>(output->dims());
+    auto dst_dims = paddle::framework::vectorize(output->dims());
     return memory::desc(dst_dims, dt, MKLDNNMemoryFormat::any);
   }
 
@@ -133,7 +133,7 @@ class ConcatMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
 
     ConcatPrimitiveFactory<T> prim_creator;
     std::string key = platform::CreateKey(
-        paddle::framework::vectorize<int>(multi_input[0]->dims()),
+        paddle::framework::vectorize(multi_input[0]->dims()),
         ctx.op().Output("Out"), dt, platform::ThreadIDasStr());
 
     const std::string key_prim = key + "@concat_p";

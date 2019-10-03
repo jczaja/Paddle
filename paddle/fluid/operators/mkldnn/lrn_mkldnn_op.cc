@@ -49,7 +49,7 @@ class LRNMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
     const float k = ctx.Attr<float>("k");
     bool is_test = ctx.Attr<bool>("is_test");
 
-    auto dims = paddle::framework::vectorize<int64_t>(x->dims());
+    auto dims = paddle::framework::vectorize(x->dims());
 
     platform::LRNMKLDNNHandler<T> handler(dims, n, alpha, beta, k, x->format(),
                                           is_test, dev_ctx, ctx.GetPlace(),
@@ -111,7 +111,7 @@ class LRNMKLDNNGradOpKernel : public paddle::framework::OpKernel<T> {
 
     auto& dev_ctx = ctx.template device_context<MKLDNNDeviceContext>();
 
-    auto dims = paddle::framework::vectorize<int64_t>(x->dims());
+    auto dims = paddle::framework::vectorize(x->dims());
 
     platform::LRNMKLDNNHandler<T> handler(
         dims, n, alpha, beta, k, x->format(), out_grad->format(), dev_ctx,

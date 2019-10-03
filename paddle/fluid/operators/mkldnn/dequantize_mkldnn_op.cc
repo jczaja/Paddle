@@ -46,8 +46,8 @@ class DeQuantOpKernel : public framework::OpKernel<T> {
     float* output_data = output->mutable_data<float>(ctx.GetPlace());
     std::vector<float> reorder_scale = {1.0f / scale_data};
 
-    auto src_tz = paddle::framework::vectorize<int64_t>(input->dims());
-    auto dst_tz = paddle::framework::vectorize<int64_t>(output->dims());
+    auto src_tz = paddle::framework::vectorize(input->dims());
+    auto dst_tz = paddle::framework::vectorize(output->dims());
     mkldnn::memory::data_type src_dt =
         paddle::framework::ToMKLDNNDataType(input->type());
     MKLDNNMemoryFormat src_fmt = input->format();

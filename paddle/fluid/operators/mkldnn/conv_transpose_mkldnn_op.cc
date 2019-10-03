@@ -88,9 +88,8 @@ class ConvTransposeMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
     const T* input_data = input->data<T>();
     const T* filter_data = filter->data<T>();
 
-    auto src_tz = paddle::framework::vectorize<int64_t>(input->dims());
-    auto iohw_weights_tz =
-        paddle::framework::vectorize<int64_t>(filter->dims());
+    auto src_tz = paddle::framework::vectorize(input->dims());
+    auto iohw_weights_tz = paddle::framework::vectorize(filter->dims());
     auto weights_tz = iohw_weights_tz;
 
     // IOHW -> OIHW
@@ -131,7 +130,7 @@ class ConvTransposeMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
       weights_tz[3] = h;
       weights_tz[4] = w;
     }
-    auto dst_tz = paddle::framework::vectorize<int64_t>(output->dims());
+    auto dst_tz = paddle::framework::vectorize(output->dims());
 
     // Get unique name for storing MKLDNN primitives
     const std::string key =
@@ -172,7 +171,7 @@ class ConvTransposeMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
     auto fwd_prop_kind = is_test ? mkldnn::prop_kind::forward_inference
                                  : mkldnn::prop_kind::forward_training;
     if (bias) {
-      bias_tz = paddle::framework::vectorize<int64_t>(bias->dims());
+      bias_tz = paddle::framework::vectorize(bias->dims());
       auto bias_md = platform::MKLDNNMemDesc(
           bias_tz, platform::MKLDNNGetDataType<T>(), MKLDNNMemoryFormat::x);
       conv_transpose_pd = handler.AcquireConvolutionPrimitiveDescriptor(

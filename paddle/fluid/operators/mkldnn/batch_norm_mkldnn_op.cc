@@ -140,8 +140,8 @@ class BatchNormMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
     PADDLE_ENFORCE_NE(x->format(), MKLDNNMemoryFormat::undef,
                       "Wrong format set for X tensor");
 
-    auto src_tz = paddle::framework::vectorize<int64_t>(x->dims());
-    auto scale_tz = paddle::framework::vectorize<int64_t>(scale->dims());
+    auto src_tz = paddle::framework::vectorize(x->dims());
+    auto scale_tz = paddle::framework::vectorize(scale->dims());
     PADDLE_ENFORCE(scale_tz.size() == 1, "Dims of scale tensor is NOT 1");
     const unsigned int C = scale_tz[0];
 
@@ -243,8 +243,8 @@ class BatchNormMKLDNNGradOpKernel : public paddle::framework::OpKernel<T> {
     PADDLE_ENFORCE_NE(diff_y->format(), MKLDNNMemoryFormat::undef,
                       "Wrong format set for Input diff_y tensor");
 
-    auto src_tz = paddle::framework::vectorize<int64_t>(x->dims());
-    auto scale_tz = paddle::framework::vectorize<int64_t>(scale->dims());
+    auto src_tz = framework::vectorize(x->dims());
+    auto scale_tz = framework::vectorize(scale->dims());
     PADDLE_ENFORCE(scale_tz.size() == 1, "Dims of scale tensor is NOT 1");
 
     const unsigned int C = scale_tz[0];

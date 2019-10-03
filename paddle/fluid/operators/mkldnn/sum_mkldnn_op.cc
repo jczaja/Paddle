@@ -63,7 +63,7 @@ class SumMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
       LoDTensor* output = ctx.Output<LoDTensor>("Out");
       T* output_data = output->mutable_data<T>(ctx.GetPlace());
 
-      auto dst_tz = framework::vectorize<int64_t>(output->dims());
+      auto dst_tz = framework::vectorize(output->dims());
       auto src_tz = dst_tz;
       MKLDNNMemoryFormat output_format{MKLDNNMemoryFormat::undef};
       std::vector<float> scales;

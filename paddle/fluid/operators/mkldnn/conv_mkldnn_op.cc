@@ -191,11 +191,11 @@ class ConvMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
     const T* input_data = input->data<T>();
     const T* filter_data = filter->data<T>();
 
-    auto src_tz = paddle::framework::vectorize<int64_t>(input->dims());
-    auto weights_tz = paddle::framework::vectorize<int64_t>(filter->dims());
+    auto src_tz = paddle::framework::vectorize(input->dims());
+    auto weights_tz = paddle::framework::vectorize(filter->dims());
     int g = std::max(groups, 1);
-
     GetWeightsTz(weights_tz, g, is_conv3d);
+
     auto dst_tz = paddle::framework::vectorize(output->dims());
 
     // Get unique name for storing MKLDNN primitives
@@ -243,7 +243,7 @@ class ConvMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
     auto fwd_prop_kind = is_test ? mkldnn::prop_kind::forward_inference
                                  : mkldnn::prop_kind::forward_training;
     if (bias) {
-      bias_tz = paddle::framework::vectorize<int64_t>(bias->dims());
+      bias_tz = paddle::framework::vectorize(bias->dims());
       auto bias_md = platform::MKLDNNMemDesc(
           bias_tz, platform::MKLDNNGetDataType<T>(), MKLDNNMemoryFormat::x);
       conv_pd = handler.AcquireConvolutionPrimitiveDescriptor(
@@ -286,7 +286,7 @@ class ConvMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
         auto output_data =
             output->mutable_data<T>(ctx.GetPlace(), handler.GetDstMemorySize());
         auto residual_data_tz =
-            paddle::framework::vectorize<int64_t>(residual_param->dims());
+            paddle::framework::vectorize(residual_param->dims());
         auto residual_data_type =
             paddle::framework::ToMKLDNNDataType(residual_param->type());
 
@@ -451,11 +451,11 @@ class ConvMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
                         "int8 does not support conv3d currently");
 
       int groups = ctx.Attr<int>("groups");
-      auto weights_tz = paddle::framework::vectorize<int>(filter->dims());
+      auto weights_tz = paddle::framework::vectorize(filter->dims());
       int g = std::max(groups, 1);
 
       GetWeightsTz(weights_tz, g, is_conv3d);
-      auto dst_tz = paddle::framework::vectorize<int>(output->dims());
+      auto dst_tz = paddle::framework::vectorize(output->dims());
 
       PADDLE_ENFORCE_EQ(
           is_conv3d

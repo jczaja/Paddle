@@ -126,7 +126,7 @@ class MulPrimitiveFactory {
   memory::desc CreateMemDescriptor(
       const Tensor *tensor, MKLDNNMemoryFormat format,
       memory::data_type type = platform::MKLDNNGetDataType<T>()) {
-    auto dims = framework::vectorize<int64_t>(tensor->dims());
+    auto dims = framework::vectorize(tensor->dims());
     return platform::MKLDNNMemDesc(dims, type, format);
   }
 
@@ -169,7 +169,7 @@ class MulPrimitiveFactory {
   }
 
   memory TransposeInputY(const Tensor *input_y) {
-    auto dims = framework::vectorize<int64_t>(input_y->dims());
+    auto dims = framework::vectorize(input_y->dims());
     std::swap(dims[0], dims[1]);  // Correct output dimensions
     auto src_desc = CreateMemDescriptor<YT>(dims, MKLDNNMemoryFormat::io);
     auto dst_desc = CreateMemDescriptor<YT>(dims, MKLDNNMemoryFormat::oi);
@@ -355,8 +355,8 @@ std::shared_ptr<MulPrimitiveFactory<XT, YT, OT>> GetPrimitiveFactory(
     const Tensor *input_x, const Tensor *input_y,
     const mkldnn::engine &mkldnn_engine, bool enable_quant) {
   const std::string key = platform::CreateKey(
-      input_x->type(), framework::vectorize<int>(input_x->dims()),
-      input_y->type(), framework::vectorize<int>(input_y->dims()),
+      input_x->type(), framework::vectorize(input_x->dims()),
+      input_y->type(), framework::vectorize(input_y->dims()),
       ctx.op().Output("Out"));
 
   auto prim_creator = std::static_pointer_cast<MulPrimitiveFactory<XT, YT, OT>>(

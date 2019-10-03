@@ -71,8 +71,8 @@ class PoolMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
     PADDLE_ENFORCE(input->dims().size() == 4,
                    "Input dim must be with 4, i.e. NCHW");
 
-    auto src_tz = paddle::framework::vectorize<int64_t>(input->dims());
-    auto dst_tz = paddle::framework::vectorize<int64_t>(output->dims());
+    auto src_tz = paddle::framework::vectorize(input->dims());
+    auto dst_tz = paddle::framework::vectorize(output->dims());
 
     auto is_test = ctx.Attr<bool>("is_test");
 
@@ -154,8 +154,8 @@ class PoolMKLDNNGradOpKernel : public paddle::framework::OpKernel<T> {
 
     std::vector<mkldnn::primitive> pipeline;
 
-    auto diff_src_tz = paddle::framework::vectorize<int64_t>(in_x_grad->dims());
-    auto diff_dst_tz = paddle::framework::vectorize<int64_t>(out_grad->dims());
+    auto diff_src_tz = paddle::framework::vectorize(in_x_grad->dims());
+    auto diff_dst_tz = paddle::framework::vectorize(out_grad->dims());
 
     // Get an unique name from "argument" name of "Out" variable
     // This name will be used as key when referring info from device context
