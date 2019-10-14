@@ -47,14 +47,30 @@ static int ComputeBiasMask(int is_multi_channel) {
   return ComputeMask(is_multi_channel, o_slice_mask);
 }
 
+// inline void GetWeightsTz(std::vector<int>& weights_tz, int groups) {  //
+// NOLINT
+//   if (groups > 1) {
+//     // if (is_conv3d) [o, i, dimension, h, w]->[g, o/g, i, dimension, h, w]
+//     // else [o, i, h, w] -> [g, o/g, i, h, w]
+//     weights_tz.push_back(0);
+//     std::rotate(weights_tz.begin(), weights_tz.end() - 1, weights_tz.end());
+//     weights_tz[0] = groups;
+//     weights_tz[1] = weights_tz[1] / groups;
+//   }
+// }
+
 inline void GetWeightsTz(std::vector<int>& weights_tz, int groups) {  // NOLINT
   if (groups > 1) {
-    // if (is_conv3d) [o, i, dimension, h, w]->[g, o/g, i, dimension, h, w]
-    // else [o, i, h, w] -> [g, o/g, i, h, w]
-    weights_tz.push_back(0);
-    std::rotate(weights_tz.begin(), weights_tz.end() - 1, weights_tz.end());
+    int output = weights_tz[0];
+    int input = weights_tz[1];
+    int height = weights_tz[2];
+    int width = weights_tz[3];
+    weights_tz.resize(5);
     weights_tz[0] = groups;
-    weights_tz[1] = weights_tz[1] / groups;
+    weights_tz[1] = output / groups;
+    weights_tz[2] = input;
+    weights_tz[3] = height;
+    weights_tz[4] = width;
   }
 }
 
@@ -69,32 +85,41 @@ inline MKLDNNMemoryFormat GetWeightsFormat(MKLDNNMemoryFormat format,
 
 static std::vector<float> ComputeOutputShiftScale(
     const float scale_out_data, const float scale_in_data,
-    const std::vector<float>& scale_weights_data) {
-  int count = scale_weights_data.size();
-  std::vector<float> output_shift_scale(count);
+    const std::vector<float>& scale_weights_data, bool is_cached) {
+  if (!is_cached) {
+    int count = scale_weights_data.size();
+    std::vector<float> output_shift_scale(count);
 #pragma omp parallel for
-  for (int i = 0; i < count; i++) {
-    if (scale_weights_data[i] == 0.0) {
-      output_shift_scale[i] = scale_out_data;
-    } else {
-      output_shift_scale[i] =
-          static_cast<float>(static_cast<double>(scale_out_data) /
-                             (static_cast<double>(scale_in_data) *
-                              static_cast<double>(scale_weights_data[i])));
+    for (int i = 0; i < count; i++) {
+      if (scale_weights_data[i] == 0.0) {
+        output_shift_scale[i] = scale_out_data;
+      } else {
+        output_shift_scale[i] =
+            static_cast<float>(static_cast<double>(scale_out_data) /
+                               (static_cast<double>(scale_in_data) *
+                                static_cast<double>(scale_weights_data[i])));
+      }
     }
+    return output_shift_scale;
+  } else {
+    return {};
   }
-  return output_shift_scale;
 }
 
 static std::vector<float> ComputeBiasScale(
-    const float scale_in_data, const std::vector<float>& scale_weights_data) {
-  int count = scale_weights_data.size();
-  std::vector<float> scale_bias_data(count);
+    const float scale_in_data, const std::vector<float>& scale_weights_data,
+    bool is_cached) {
+  if (!is_cached) {
+    int count = scale_weights_data.size();
+    std::vector<float> scale_bias_data(count);
 #pragma omp parallel for if (count > 1)
-  for (int i = 0; i < count; i++) {
-    scale_bias_data[i] = scale_in_data * scale_weights_data[i];
+    for (int i = 0; i < count; i++) {
+      scale_bias_data[i] = scale_in_data * scale_weights_data[i];
+    }
+    return scale_bias_data;
+  } else {
+    return {};
   }
-  return scale_bias_data;
 }
 
 static mkldnn::memory::data_type GetDstType(bool is_int8,
@@ -362,6 +387,7 @@ class ConvMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
 
   template <typename T_out>
   void ComputeINT8(const paddle::framework::ExecutionContext& ctx) const {
+    // PROFILER: attr_get
     const bool is_test = ctx.Attr<bool>("is_test");
 
     auto& dev_ctx =
@@ -449,11 +475,14 @@ class ConvMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
     mkldnn::memory::data_type src_dt =
         paddle::framework::ToMKLDNNDataType(input->type());
 
+    // PROFILER: key_creation
+
     std::string key = platform::CreateKey(
         src_tz, weights_tz, strides, paddings, dilations, groups, src_dt,
         input->format(), fuse_activation, fuse_residual_conn,
         ctx.op().Input("Input") + ctx.op().Input("Filter"));
 
+    // PROFILER: md_creation
     std::shared_ptr<mkldnn::convolution_forward> conv_p;
     std::shared_ptr<mkldnn::memory> src_memory_p;
     std::shared_ptr<mkldnn::memory> user_src_memory_p;
@@ -463,9 +492,6 @@ class ConvMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
 
     const float* filter_data = filter->data<float>();
     bool is_multi_channel = scale_weights_data.size() > 1;
-
-    auto output_shift_scale = ComputeOutputShiftScale(
-        scale_out_data, scale_in_data, scale_weights_data);
 
     float scale_residual =
         fuse_residual_conn ? scale_out_data / scale_in_eltwise_data : 1.0f;
@@ -490,12 +516,19 @@ class ConvMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
     auto dst_md = platform::MKLDNNMemDesc(
         dst_tz, platform::MKLDNNGetDataType<T_out>(), chosen_memory_format);
 
+    // PROFILER: create_handler
+
     platform::ConvMKLDNNHandler handler(dev_ctx, mkldnn_engine, key);
     auto propagation = is_test ? mkldnn::prop_kind::forward_scoring
                                : mkldnn::prop_kind::forward_training;
 
-    std::vector<int> bias_tz;
+    // PROFILER: computeOutputScale
 
+    auto output_shift_scale = ComputeOutputShiftScale(
+        scale_out_data, scale_in_data, scale_weights_data, handler.is_cached());
+
+    std::vector<int> bias_tz;
+    // PROFILER: createPrimitiveDescriptor
     if (bias) {
       bias_tz = paddle::framework::vectorize<int>(bias->dims());
       auto bias_md = platform::MKLDNNMemDesc(bias_tz, memory::data_type::s32,
@@ -510,8 +543,8 @@ class ConvMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
           mkldnn_engine, fuse_activation, fuse_alpha, fuse_beta,
           fuse_residual_conn, propagation, output_shift_scale, scale_residual);
     }
-
     // create mkldnn memory from input tensors (data/weights)
+    // PROFILER: user_src_memory
     user_src_memory_p =
         handler.AcquireSrcMemory(user_src_md, to_void_cast<T>(input_data));
     auto user_weights_memory_p = handler.AcquireWeightsMemory(
@@ -521,6 +554,8 @@ class ConvMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
     src_memory_p =
         handler.AcquireSrcMemoryFromPrimitive(user_src_memory_p, pipeline);
 
+    // PROFILER: weights_memory
+
     std::shared_ptr<mkldnn::memory> weights_memory_p;
 
     int mask_reorder = ComputeWeightsMask(is_multi_channel, g);
@@ -528,7 +563,7 @@ class ConvMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
     weights_memory_p = handler.AcquireWeightsMemoryFromPrimitive(
         user_weights_memory_p, pipeline, is_test, true, scale_weights_data,
         mask_reorder);
-
+    // PROFILER: output_data
     if (fuse_residual_conn) {
       auto residual_param = ctx.Input<Tensor>("ResidualData");
       auto residual_param_data = residual_param->data<T_out>();
@@ -565,6 +600,7 @@ class ConvMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
 
     // create convolution op primitive
     if (bias) {
+      // PROFILER bias_data
       const float* bias_data = bias->data<float>();
       auto user_bias_md = platform::MKLDNNMemDesc(
           {bias_tz}, platform::MKLDNNGetDataType<float>(), memory::format::x);
@@ -572,27 +608,33 @@ class ConvMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
           user_bias_md, to_void_cast<float>(bias_data));
       std::shared_ptr<mkldnn::memory> bias_memory_p;
 
-      auto scale_bias_data =
-          ComputeBiasScale(scale_in_data, scale_weights_data);
+      auto scale_bias_data = ComputeBiasScale(scale_in_data, scale_weights_data,
+                                              handler.is_cached());
       int mask_bias_reorder = ComputeBiasMask(is_multi_channel);
       bias_memory_p = handler.AcquireBiasMemoryFromPrimitive(
           user_bias_memory_p, pipeline, is_test, true, scale_bias_data,
           mask_bias_reorder);
+      // PROFILER acquire_conv
       conv_p = handler.AcquireConvolution(src_memory_p, weights_memory_p,
                                           bias_memory_p, dst_memory_p);
     } else {
+      // PROFILER acquire_conv
       conv_p = handler.AcquireConvolution(src_memory_p, weights_memory_p,
                                           dst_memory_p);
     }
     // push primitive to stream and wait until it's executed
+    // PROFILER conv_execute
     pipeline.push_back(*conv_p);
 
     // push primitive to stream and wait until it's executed
+
     stream(stream::kind::eager).submit(pipeline).wait();
+    // PROFILER: conv_end
     if (platform::MKLDNNGetDataType<T_out>() == memory::data_type::s8 &&
         unsigned_output) {
       output->mutable_data<uint8_t>(ctx.GetPlace());
     }
+
     output->set_layout(DataLayout::kMKLDNN);
     output->set_format(GetMKLDNNFormat(*dst_memory_p));
   }

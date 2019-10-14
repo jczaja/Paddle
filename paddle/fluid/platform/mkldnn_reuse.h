@@ -967,6 +967,8 @@ class ConvMKLDNNTemplateHandler : public MKLDNNHandler {
                                scale_data, mask);
   }
 
+  bool is_cached() { return dev_ctx_.GetBlob(key_ + "@conv_p") != nullptr; }
+
   mkldnn::primitive_attr CreatePostOps(
       std::string fuse_activation, float fuse_alpha, float fuse_beta,
       bool fuse_residual_conn, const std::vector<float> output_shift_scale = {},
