@@ -410,13 +410,13 @@ class ConvMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
     std::vector<int> paddings = ctx.Attr<std::vector<int>>("paddings");
     std::vector<int> dilations = ctx.Attr<std::vector<int>>("dilations");
     int groups = ctx.Attr<int>("groups");
-    std::string fuse_activation = ctx.Attr<std::string>("fuse_activation");
+//    std::string fuse_activation = ctx.Attr<std::string>("fuse_activation");
     float fuse_alpha = ctx.Attr<float>("fuse_alpha");
     float fuse_beta = ctx.Attr<float>("fuse_beta");
     bool fuse_residual_conn = ctx.Attr<bool>("fuse_residual_connection");
     bool force_fp32_output = ctx.Attr<bool>("force_fp32_output");
-    bool unsigned_output =
-        (fuse_activation == "relu" || fuse_activation == "relu6");
+    bool unsigned_output = true;
+//        (fuse_activation == "relu" || fuse_activation == "relu6");
     auto scale_in_data = ctx.Attr<float>("Scale_in");
     auto scale_in_eltwise_data = ctx.Attr<float>("Scale_in_eltwise");
     auto scale_weights_data = ctx.Attr<std::vector<float>>("Scale_weights");
