@@ -467,10 +467,10 @@ class ConvMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
     // of conv int8 mkl-dnn. Once conv fp32 and conv int8
     // are merged/unified, this will disappear
     std::string key_tid = "";
-    if (platform::get_cur_mkldnn_session_id() ==
-        platform::kMKLDNNSessionID_Default) {
-      key_tid = "-t:" + platform::ThreadIDasStr();
-    }
+//    if (platform::get_cur_mkldnn_session_id() ==
+//        platform::kMKLDNNSessionID_Default) {
+//      key_tid = "-t:" + platform::ThreadIDasStr();
+//    }
 
     auto prim_key = key + key_tid + "@conv_p";
     auto dst_key = key + key_tid + "@dst_mem_p";

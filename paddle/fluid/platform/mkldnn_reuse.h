@@ -45,7 +45,7 @@ class MKLDNNHandlerT {
         platform::kMKLDNNSessionID_Default) {
       key_ = key_common_;
     } else {
-      key_ = key_common_ + "-t:" + ThreadIDasStr();
+      key_ = key_common_;// + "-t:" + ThreadIDasStr();
     }
   }
 
@@ -189,7 +189,7 @@ class MKLDNNHandler {
         platform::kMKLDNNSessionID_Default) {
       key_ = key_common_;
     } else {
-      key_ = key_common_ + "-t:" + ThreadIDasStr();
+      key_ = key_common_;// + "-t:" + ThreadIDasStr();
     }
   }
 
