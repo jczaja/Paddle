@@ -410,7 +410,6 @@ class ConvMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
     std::vector<int> paddings = ctx.Attr<std::vector<int>>("paddings");
     std::vector<int> dilations = ctx.Attr<std::vector<int>>("dilations");
     int groups = ctx.Attr<int>("groups");
-//    std::string fuse_activation = ctx.Attr<std::string>("fuse_activation");
     float fuse_alpha = ctx.Attr<float>("fuse_alpha");
     float fuse_beta = ctx.Attr<float>("fuse_beta");
     bool fuse_residual_conn = ctx.Attr<bool>("fuse_residual_connection");
@@ -484,6 +483,7 @@ class ConvMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
         dev_ctx.GetBlob(prim_key));
 
     if (conv_p == nullptr || !is_test) {
+      std::string fuse_activation = ctx.Attr<std::string>("fuse_activation");
       const float* filter_data = filter->data<float>();
       bool is_multi_channel = scale_weights_data.size() > 1;
 
