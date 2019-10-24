@@ -60,12 +60,12 @@ inline void GetWeightsTz(std::vector<int64_t>& weights_tz,  // NOLINT
   }
 }
 
-inline MKLDNNMemoryFormat GetWeightsFormat(MKLDNNMemoryFormat format,
-                                           int groups, bool is_conv3d) {
+inline MKLDNNMemDesc GetWeightsMemDesc(const Tensor& tensor, std::vector<int64_t>& weights_tz, int groups, bool is_conv3d)
+{
   if (is_conv3d) {
-    return (groups == 1) ? format : MKLDNNMemoryFormat::goidhw;
+    return (groups == 1) ? tensor.get_mkldnn_mem_desc() : MKLDNNMemDesc( weights_tz, tensor->type(), MKLDNNMemoryFormat::goidhw);
   } else {
-    return (groups == 1) ? format : MKLDNNMemoryFormat::goihw;
+    return (groups == 1) ? tensor.get_mkldnn_mem_desc() : MKLDNNMemDesc( weights_tz, tensor->type(), MKLDNNMemoryFormat::goihw);
   }
 }
 
@@ -131,13 +131,9 @@ class ConvMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
 
     PADDLE_ENFORCE_EQ(input->layout(), DataLayout::kMKLDNN,
                       "Wrong layout set for Input tensor");
-    PADDLE_ENFORCE_NE(input->format(), MKLDNNMemoryFormat::undef,
-                      "Wrong format set for Input tensor");
 
     PADDLE_ENFORCE_EQ(filter->layout(), DataLayout::kMKLDNN,
                       "Wrong layout set for Filter tensor");
-    PADDLE_ENFORCE_NE(filter->format(), MKLDNNMemoryFormat::undef,
-                      "Wrong format set for Filter tensor");
 
     PADDLE_ENFORCE_GE(
         input->dims().size(), 4,
@@ -156,8 +152,6 @@ class ConvMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
     if (bias) {
       PADDLE_ENFORCE_EQ(bias->layout(), DataLayout::kMKLDNN,
                         "Wrong layout set for Bias tensor");
-      PADDLE_ENFORCE_NE(bias->format(), MKLDNNMemoryFormat::undef,
-                        "Wrong format set for Bias tensor");
 
       PADDLE_ENFORCE_EQ(bias->dims().size(), 1,
                         "Bias must only have 1 dimension, i.e. X");
@@ -202,14 +196,7 @@ class ConvMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
     const std::string key = platform::CreateKey(
         src_tz, ctx.op().Input("Input") + ctx.op().Input("Filter"));
 
-    auto src_format = input->format();
-    MKLDNNMemoryFormat weights_format =
-        GetWeightsFormat(filter->format(), g, is_conv3d);
-
-    auto user_src_md = platform::MKLDNNMemDesc(
-        {src_tz}, platform::MKLDNNGetDataType<T>(), src_format);
-    auto user_weights_md = platform::MKLDNNMemDesc(
-        {weights_tz}, platform::MKLDNNGetDataType<T>(), weights_format);
+    auto user_weights_md = GetWeightsMemDesc(filter, weights_tz, g, is_conv3d);
 
     /* create memory descriptor for convolution without specified format
      * ('any') which lets a primitive (convolution in this case) choose
@@ -259,7 +246,7 @@ class ConvMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
 
     // create mkldnn memory from input tensors (data/weights)
     auto user_src_memory_p =
-        handler.AcquireSrcMemory(user_src_md, to_void_cast<T>(input_data));
+        handler.AcquireSrcMemory(input->get_mkldnn_mem_desc(), to_void_cast<T>(input_data));
     auto user_weights_memory_p = handler.AcquireWeightsMemory(
         user_weights_md, to_void_cast<T>(filter_data));
 
@@ -282,18 +269,12 @@ class ConvMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
                         "Output and elementwise parameter need to have the "
                         "same dimension sizes");
 
-      if (residual_param->format() != handler.GetDstFormat()) {
+      if (residual_param->get_mkldnn_mem_desc() != handler.GetDstDesc()) {
         auto output_data =
             output->mutable_data<T>(ctx.GetPlace(), handler.GetDstMemorySize());
-        auto residual_data_tz =
-            paddle::framework::vectorize(residual_param->dims());
-        auto residual_data_type =
-            paddle::framework::ToMKLDNNDataType(residual_param->type());
 
-        auto user_residual_md = platform::MKLDNNMemDesc(
-            residual_data_tz, residual_data_type, residual_param->format());
         user_residual_memory_p = handler.AcquireResidualDataMemory(
-            user_residual_md, to_void_cast<T>(residual_param_data));
+            residual_param->get_mkldnn_mem_desc(), to_void_cast<T>(residual_param_data));
 
         dst_memory_p = handler.AcquireDstMemoryFromResidualDataMemory(
             user_residual_memory_p, to_void_cast<T>(output_data), pipeline);
@@ -351,9 +332,6 @@ class ConvMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
 
     PADDLE_ENFORCE_EQ(input->layout(), DataLayout::kMKLDNN,
                       "Wrong layout set for Input tensor");
-    PADDLE_ENFORCE_NE(input->format(), MKLDNNMemoryFormat::undef,
-                      "Wrong format set for Input tensor");
-
     PADDLE_ENFORCE_GE(
         input->dims().size(), 4,
         "Input must be with 4 or 5 dimensions, i.e. NCHW or NCDHW");
@@ -711,18 +689,10 @@ class ConvMKLDNNGradOpKernel : public paddle::framework::OpKernel<T> {
 
     PADDLE_ENFORCE_EQ(input->layout(), DataLayout::kMKLDNN,
                       "Wrong layout set for Input tensor");
-    PADDLE_ENFORCE_NE(input->format(), MKLDNNMemoryFormat::undef,
-                      "Wrong format set for Input tensor");
-
     PADDLE_ENFORCE_EQ(filter->layout(), DataLayout::kMKLDNN,
                       "Wrong layout set for Filter tensor");
-    PADDLE_ENFORCE_NE(filter->format(), MKLDNNMemoryFormat::undef,
-                      "Wrong format set for Filter tensor");
-
     PADDLE_ENFORCE_EQ(output_grad->layout(), DataLayout::kMKLDNN,
                       "Wrong layout set for output_grad tensor");
-    PADDLE_ENFORCE_NE(output_grad->format(), MKLDNNMemoryFormat::undef,
-                      "Wrong format set for output_grad tensor");
 
     PADDLE_ENFORCE_EQ(
         ctx.Attr<bool>("is_test"), false,
@@ -754,9 +724,7 @@ class ConvMKLDNNGradOpKernel : public paddle::framework::OpKernel<T> {
     GetWeightsTz(weights_tz, g, is_conv3d);
     auto dst_tz = paddle::framework::vectorize(output_grad->dims());
 
-    auto src_format = input->format();
-    MKLDNNMemoryFormat weights_format =
-        GetWeightsFormat(filter->format(), g, is_conv3d);
+    auto user_weights_md = GetWeightsMemDesc(filter, weights_tz, g, is_conv3d);
 
     // Get an unique name from "argument" name of "input" and "Filter" variable
     // as well as attributes of primitive to be created
@@ -766,14 +734,6 @@ class ConvMKLDNNGradOpKernel : public paddle::framework::OpKernel<T> {
 
     const std::string key_conv_pd = key + "@conv_pd";
     std::vector<primitive> pipeline;
-
-    // Create user memory descriptors
-    auto user_src_md = platform::MKLDNNMemDesc(
-        {src_tz}, platform::MKLDNNGetDataType<T>(), src_format);
-    auto user_weights_md = platform::MKLDNNMemDesc(
-        {weights_tz}, platform::MKLDNNGetDataType<T>(), weights_format);
-    auto user_diff_dst_md = platform::MKLDNNMemDesc(
-        {dst_tz}, platform::MKLDNNGetDataType<T>(), output_grad->format());
 
     /* create memory descriptor for conv backward without specified format
      * ('any') which lets a primitive (conv backward in this case) choose
@@ -830,11 +790,11 @@ class ConvMKLDNNGradOpKernel : public paddle::framework::OpKernel<T> {
 
     // create mkldnn memory from input tensors (data/weights)
     auto user_src_memory_p =
-        handler.AcquireSrcMemory(user_src_md, to_void_cast<T>(input_data));
+        handler.AcquireSrcMemory(input->get_mkldnn_mem_desc(), to_void_cast<T>(input_data));
     auto user_weights_memory_p = handler.AcquireWeightsMemory(
         user_weights_md, to_void_cast<T>(filter_data));
     auto user_diff_dst_memory_p = handler.AcquireDiffDstMemory(
-        user_diff_dst_md, to_void_cast<T>(output_grad_data));
+        output_grad->get_mkldnn_mem_desc(), to_void_cast<T>(output_grad_data));
     mkldnn::stream astream(mkldnn_engine);
     if (filter_grad) {
       auto src_memory_p = handler.AcquireSrcMemoryFromWeightsPrimitive(

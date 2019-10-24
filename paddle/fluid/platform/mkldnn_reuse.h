@@ -411,18 +411,15 @@ class ActivationMKLDNNHandler
  public:
   ActivationMKLDNNHandler(const std::vector<int64_t>& dims,
                           mkldnn::algorithm algorithm, float alpha, float beta,
-                          const MKLDNNMemoryFormat fmt, bool is_test,
+                          const MKLDNNMemoryDesc& md, bool is_test,
                           const platform::MKLDNNDeviceContext& dev_ctx,
                           platform::Place cpu_place,
                           const std::string& unique_name)
-
       : platform::MKLDNNHandlerT<T, mkldnn::eltwise_forward,
                                  mkldnn::eltwise_backward>(
             dev_ctx, dev_ctx.GetEngine(), cpu_place,
             platform::CreateKey(dims, unique_name)) {
-    auto md = mkldnn::memory::desc(dims, platform::MKLDNNGetDataType<T>(), fmt);
-
-    this->AcquireForwardPrimitiveDescriptor(
+        this->AcquireForwardPrimitiveDescriptor(
         is_test ? mkldnn::prop_kind::forward_inference
                 : mkldnn::prop_kind::forward_training,
         algorithm, md, alpha, beta);
@@ -430,8 +427,8 @@ class ActivationMKLDNNHandler
 
   ActivationMKLDNNHandler(const std::vector<int64_t>& dims,
                           mkldnn::algorithm algorithm, float alpha, float beta,
-                          const MKLDNNMemoryFormat fmt,
-                          const MKLDNNMemoryFormat diff_fmt,
+                          const MKLDNNMemoryDesc& md,
+                          const MKLDNNMemoryDesc diff_md,
                           const platform::MKLDNNDeviceContext& dev_ctx,
                           platform::Place cpu_place,
                           const std::string& unique_name)
@@ -440,12 +437,8 @@ class ActivationMKLDNNHandler
                                  mkldnn::eltwise_backward>(
             dev_ctx, dev_ctx.GetEngine(), cpu_place,
             platform::CreateKey(dims, unique_name)) {
-    auto diff_dst_md = platform::MKLDNNMemDesc(
-        dims, platform::MKLDNNGetDataType<T>(), diff_fmt);
-    auto src_md =
-        platform::MKLDNNMemDesc(dims, platform::MKLDNNGetDataType<T>(), fmt);
 
-    this->AcquireBackwardPrimitiveDescriptor(algorithm, diff_dst_md, src_md,
+            this->AcquireBackwardPrimitiveDescriptor(algorithm, diff_md, md,
                                              alpha, beta);
   }
 
@@ -464,16 +457,14 @@ class LRNMKLDNNHandler
  public:
   LRNMKLDNNHandler(const std::vector<int64_t>& dims, const int n,
                    const float alpha, const float beta, const float k,
-                   const MKLDNNMemoryFormat fmt, bool is_test,
+                   const MKLDNNMemoryDesc& src_md, bool is_test,
                    const platform::MKLDNNDeviceContext& dev_ctx,
                    platform::Place cpu_place, const std::string& unique_name)
-
       : platform::MKLDNNHandlerT<T, mkldnn::lrn_forward, mkldnn::lrn_backward>(
             dev_ctx, dev_ctx.GetEngine(), cpu_place,
             platform::CreateKey(dims, unique_name)) {
-    auto src_md =
-        mkldnn::memory::desc(dims, platform::MKLDNNGetDataType<T>(), fmt);
-    this->AcquireForwardPrimitiveDescriptor(
+
+        this->AcquireForwardPrimitiveDescriptor(
         is_test ? mkldnn::prop_kind::forward_inference
                 : mkldnn::prop_kind::forward_training,
         mkldnn::algorithm::lrn_across_channels, src_md, n, alpha, beta, k);
@@ -481,20 +472,16 @@ class LRNMKLDNNHandler
 
   LRNMKLDNNHandler(const std::vector<int64_t>& dims, const int n,
                    const float alpha, const float beta, const float k,
-                   const MKLDNNMemoryFormat fmt,
-                   const MKLDNNMemoryFormat diff_fmt,
+                   const MKLDNNMemoryDesc& src_md,
+                   const MKLDNNMemoryDesc& diff_md,
                    const platform::MKLDNNDeviceContext& dev_ctx,
                    platform::Place cpu_place, const std::string& unique_name)
 
       : platform::MKLDNNHandlerT<T, mkldnn::lrn_forward, mkldnn::lrn_backward>(
             dev_ctx, dev_ctx.GetEngine(), cpu_place,
             platform::CreateKey(dims, unique_name)) {
-    auto src_md =
-        mkldnn::memory::desc(dims, platform::MKLDNNGetDataType<T>(), fmt);
-    auto diff_md =
-        mkldnn::memory::desc(dims, platform::MKLDNNGetDataType<T>(), diff_fmt);
 
-    this->AcquireBackwardPrimitiveDescriptor(
+        this->AcquireBackwardPrimitiveDescriptor(
         mkldnn::algorithm::lrn_across_channels, src_md, diff_md, n, alpha, beta,
         k);
   }
@@ -525,15 +512,14 @@ class PoolingMKLDNNHandler : public MKLDNNHandlerT<T, mkldnn::pooling_forward,
       const std::vector<int64_t>& dst_dims, const std::vector<int64_t>& ksize,
       const std::vector<int64_t>& strides, const std::vector<int64_t>& paddings,
       const std::string& pooling_type, bool ceil_mode,
-      const MKLDNNMemoryFormat fmt, mkldnn::memory::data_type dt, bool is_test,
+      const MKLDNNMemoryDesc& src_md, mkldnn::memory::data_type dt, bool is_test,
       const platform::MKLDNNDeviceContext& dev_ctx, platform::Place cpu_place,
       const std::string& unique_name, bool exclude_padding)
       : platform::MKLDNNHandlerT<T, mkldnn::pooling_forward,
                                  mkldnn::pooling_backward>(
             dev_ctx, dev_ctx.GetEngine(), cpu_place,
             platform::CreateKey(src_dims, dt, unique_name)) {
-    auto src_md = mkldnn::memory::desc(src_dims, dt, fmt);
-    /* create memory descriptor for pooling without specified format
+      /* create memory descriptor for pooling without specified format
      * ('any') which lets a primitive (pooling in this case) choose
      * the memory format preferred for best performance
      */
@@ -563,17 +549,14 @@ class PoolingMKLDNNHandler : public MKLDNNHandlerT<T, mkldnn::pooling_forward,
       const std::vector<int64_t>& diff_src_dims,
       const std::vector<int64_t>& ksize, const std::vector<int64_t>& strides,
       const std::vector<int64_t>& paddings, const std::string& pooling_type,
-      bool ceil_mode, const MKLDNNMemoryFormat fmt,
-      const MKLDNNMemoryFormat diff_dst_fmt, mkldnn::memory::data_type dt,
+      bool ceil_mode, const MKLDNNMemoryDesc& diff_dst_md, mkldnn::memory::data_type dt,
       const platform::MKLDNNDeviceContext& dev_ctx, platform::Place cpu_place,
       const std::string& unique_name, bool exclude_padding)
       : platform::MKLDNNHandlerT<T, mkldnn::pooling_forward,
                                  mkldnn::pooling_backward>(
             dev_ctx, dev_ctx.GetEngine(), cpu_place,
             platform::CreateKey(diff_src_dims, dt, unique_name)) {
-    auto diff_dst_md = mkldnn::memory::desc(
-        diff_dst_dims, platform::MKLDNNGetDataType<T>(), diff_dst_fmt);
-    auto diff_src_md =
+      auto diff_src_md =
         mkldnn::memory::desc(diff_src_dims, platform::MKLDNNGetDataType<T>(),
                              MKLDNNMemoryFormat::any);
 
@@ -639,29 +622,6 @@ class TransposeMKLDNNHandler : public MKLDNNHandler {
         dims_(dims),
         axis_(axis),
         logical_axis_(dims.size(), 0) {}
-
-  std::shared_ptr<mkldnn::memory> AcquireSrcMemory(
-      const MKLDNNMemoryFormat& fmt, void* ptr) {
-    auto local_key = key_ + "@user_src_mem_p";
-    auto mem_p =
-        std::static_pointer_cast<mkldnn::memory>(dev_ctx_.GetBlob(local_key));
-    if (mem_p == nullptr) {
-      // Make memory descriptor using input format, unless it
-      // cannot be trusted (nchw) then make up memory fmt manually
-      for (size_t i = 0; i < logical_axis_.size(); ++i) {
-        logical_axis_[i] = i;
-      }
-      auto src_md = fmt != MKLDNNMemoryFormat::nchw
-                        ? platform::MKLDNNMemDesc(
-                              dims_, platform::MKLDNNGetDataType<float>(), fmt)
-                        : Axis2MemoryDesc(dims_, logical_axis_);
-      mem_p = std::make_shared<mkldnn::memory>(src_md, engine_, ptr);
-      dev_ctx_.SetBlob(local_key, mem_p);
-    } else {
-      mem_p->set_data_handle(ptr);
-    }
-    return mem_p;
-  }
 
   std::shared_ptr<mkldnn::memory> AcquireDstMemory(framework::Tensor* output,
                                                    platform::Place place) {
@@ -826,8 +786,8 @@ class ConvMKLDNNTemplateHandler : public MKLDNNHandler {
 
   size_t GetDstMemorySize() const { return conv_pd_->dst_desc().get_size(); }
 
-  MKLDNNMemoryFormat GetDstFormat() const {
-    return paddle::platform::GetMKLDNNFormat(conv_pd_->dst_desc());
+  MKLDNNMemoryDesc& GetDstDesc() const {
+    return conv_pd_->dst_desc();
   }
 
   size_t GetDiffWeightsMemorySize() const {

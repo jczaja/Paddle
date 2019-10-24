@@ -39,35 +39,29 @@ class SoftmaxMKLDNNHandler
                                       mkldnn::softmax_backward> {
  public:
   SoftmaxMKLDNNHandler(const std::vector<int64_t>& dims,
-                       const MKLDNNMemoryFormat fmt, const int& axis,
+                       const MKLDNNMemoryDesc& md, const int& axis,
                        const platform::MKLDNNDeviceContext& dev_ctx,
                        platform::Place cpu_place, const std::string& uniq_name)
       : platform::MKLDNNHandlerT<T, mkldnn::softmax_forward,
                                  mkldnn::softmax_backward>(
             dev_ctx, dev_ctx.GetEngine(), cpu_place,
             platform::CreateKey(dims, uniq_name)) {
-    auto md = mkldnn::memory::desc(dims, platform::MKLDNNGetDataType<T>(), fmt);
-
     this->AcquireForwardPrimitiveDescriptor(prop_kind::forward_scoring, md,
                                             axis);
   }
 
   SoftmaxMKLDNNHandler(const std::vector<int64_t>& dims,
-                       const MKLDNNMemoryFormat fmt,
-                       const MKLDNNMemoryFormat diff_fmt, const int& axis,
+                       const MKLDNNMemoryDesc& md,
+                       const MKLDNNMemoryDesc& diff_md,
+                       const int& axis,
                        const platform::MKLDNNDeviceContext& dev_ctx,
                        platform::Place cpu_place, const std::string& uniq_name)
       : platform::MKLDNNHandlerT<T, mkldnn::softmax_forward,
                                  mkldnn::softmax_backward>(
             dev_ctx, dev_ctx.GetEngine(), cpu_place,
             platform::CreateKey(dims, uniq_name)) {
-    auto data_softmax_md =
-        mkldnn::memory::desc(dims, platform::MKLDNNGetDataType<T>(), fmt);
-    auto diff_softmax_md =
-        mkldnn::memory::desc(dims, platform::MKLDNNGetDataType<T>(), diff_fmt);
 
-    this->AcquireBackwardPrimitiveDescriptor(diff_softmax_md, data_softmax_md,
-                                             axis);
+    this->AcquireBackwardPrimitiveDescriptor(diff_md, md, axis);
   }
 };
 
@@ -89,7 +83,7 @@ class SoftmaxMKLDNNKernel : public paddle::framework::OpKernel<T> {
 
     auto softmax_tz = paddle::framework::vectorize(dims);
 
-    SoftmaxMKLDNNHandler<T> handler(softmax_tz, input->format(), axis, dev_ctx,
+    SoftmaxMKLDNNHandler<T> handler(softmax_tz, input->get_mkldnn_mem_desc(), axis, dev_ctx,
                                     ctx.GetPlace(), ctx.op().Output("Out"));
 
     auto softmax_src_memory_p = handler.AcquireSrcMemory(input);
@@ -109,9 +103,8 @@ class SoftmaxMKLDNNKernel : public paddle::framework::OpKernel<T> {
       });
     }
 
-    output->set_layout(framework::DataLayout::kMKLDNN);
-    // Softmax output format is the same as input one
-    output->set_format(input->format());
+    // Softmax output mem desc is the same as input one
+    output->set_mkldnn_mem_desc(input->get_mkldnn_mem_desc());
   }
 };
 
@@ -137,8 +130,8 @@ class SoftmaxMKLDNNGradKernel : public paddle::framework::OpKernel<T> {
 
     auto softmax_tz = paddle::framework::vectorize(dims);
 
-    SoftmaxMKLDNNHandler<T> handler(softmax_tz, output->format(),
-                                    dout->format(), axis, dev_ctx,
+    SoftmaxMKLDNNHandler<T> handler(softmax_tz, output->get_mkldnn_mem_desc(),
+                                    dout->get_mkldnn_mem_desc(), axis, dev_ctx,
                                     ctx.GetPlace(), ctx.op().Input("Out"));
 
     auto dst_memory_p = handler.AcquireDstMemory(output);
@@ -154,8 +147,7 @@ class SoftmaxMKLDNNGradKernel : public paddle::framework::OpKernel<T> {
                             {MKLDNN_ARG_DIFF_SRC, *diff_src_memory_p}});
     astream.wait();
 
-    dx->set_layout(framework::DataLayout::kMKLDNN);
-    dx->set_format(dout->format());
+    dx->set_mkldnn_mem_desc(dout->get_mkldnn_mem_desc());
   }
 };
 }  // namespace operators

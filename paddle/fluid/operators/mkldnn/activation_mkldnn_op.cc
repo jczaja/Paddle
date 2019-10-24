@@ -82,12 +82,10 @@ void eltwise_forward(const framework::ExecutionContext &ctx,
 
   auto src_tz = framework::vectorize(x->dims());
 
-  auto src_format = src_tz.size() == 2 ? MKLDNNMemoryFormat::nc : x->format();
-
   bool is_test = ctx.Attr<bool>("is_test");
 
   platform::ActivationMKLDNNHandler<T> handler(
-      src_tz, algorithm, alpha, beta, src_format, is_test, dev_ctx,
+      src_tz, algorithm, alpha, beta, x->get_mkldnn_mem_desc(), is_test, dev_ctx,
       ctx.GetPlace(), ctx.op().Input("X"));
 
   auto src_memory_p = handler.AcquireSrcMemory(x);
@@ -99,8 +97,7 @@ void eltwise_forward(const framework::ExecutionContext &ctx,
                                   {MKLDNN_ARG_TO, *dst_memory_p}});
   astream.wait();
 
-  y->set_layout(DataLayout::kMKLDNN);
-  y->set_format(GetMKLDNNFormat(*dst_memory_p));
+  y->set_mkldnn_mem_desc(dst_memory_p->get_desc());
 }
 
 template <typename T>
@@ -117,15 +114,9 @@ void eltwise_grad(const framework::ExecutionContext &ctx,
 
   auto diff_dst_tz = framework::vectorize(diff_y->dims());
 
-  // diff_dst and src dims should be the same
-  auto src_format =
-      diff_dst_tz.size() == 2 ? MKLDNNMemoryFormat::nc : x->format();
-
-  auto diff_y_format =
-      diff_dst_tz.size() == 2 ? MKLDNNMemoryFormat::nc : diff_y->format();
-
   platform::ActivationMKLDNNHandler<T> handler(
-      diff_dst_tz, algorithm, alpha, beta, src_format, diff_y_format, dev_ctx,
+      diff_dst_tz, algorithm, alpha, beta, x->get_mkldnn_mem_desc(), 
+            diff_y->get_mkldnn_mem_desc(), dev_ctx,
       ctx.GetPlace(), ctx.op().Input("X"));
 
   auto src_memory_p = handler.AcquireBackwardSrcMemory(x);
@@ -140,8 +131,7 @@ void eltwise_grad(const framework::ExecutionContext &ctx,
                                   {MKLDNN_ARG_DIFF_SRC, *diff_src_memory_p}});
   astream.wait();
 
-  diff_x->set_layout(DataLayout::kMKLDNN);
-  diff_x->set_format(GetMKLDNNFormat(*diff_src_memory_p));
+  diff_x->set_mkldnn_mem_desc(diff_src_memory_p->get_desc());
 }
 
 template <typename T, mkldnn::algorithm algorithm>

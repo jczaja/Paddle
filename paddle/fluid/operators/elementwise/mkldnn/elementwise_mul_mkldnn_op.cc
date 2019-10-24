@@ -38,7 +38,9 @@ static void UpdateDataFormat(const framework::ExecutionContext& ctx,
     auto format_as_string = ctx.Attr<std::string>(attribute);
     auto format = StringToMKLDNNFormat(&format_as_string);
     if (format != MKLDNNMemoryFormat::any) {
-      tensor->set_format(format);
+      auto dims = paddle::framework::vectorize(tensor->dims());
+      auto md = mkldnn::memory::desc(dims, tensor->type(), format);
+      tensor->set_mkldnn_mem_desc();
     }
   }
 }
@@ -51,15 +53,14 @@ static void ReorderInput(framework::Tensor* tensor,
   auto dims = paddle::framework::vectorize(tensor->dims());
   framework::Tensor out_tensor;
   out_tensor.Resize(tensor->dims());
-  out_tensor.set_format(isFourDim ? MKLDNNMemoryFormat::nchw
-                                  : MKLDNNMemoryFormat::nc);
-  out_tensor.set_layout(tensor->layout());
+  auto md = mkldnn::memory::desc(dims, platform::MKLDNNGetDataType<T>(), isFourDim ? MKLDNNMemoryFormat::nchw : MKLDNNMemoryFormat::nc);
+  out_tensor.set_mkldnn_mem_desc(md);
   mkldnn::memory input_memory = {
-      {dims, platform::MKLDNNGetDataType<T>(), tensor->format()},
+      {md},
       engine,
       to_void_cast<T>(tensor->data<T>())};
   mkldnn::memory output_memory = {
-      {dims, platform::MKLDNNGetDataType<T>(), out_tensor.format()},
+      {out_tensor.get_mkldnn_mem_desc()},
       engine,
       to_void_cast<T>(out_tensor.mutable_data<T>(place))};
   platform::Reorder(input_memory, output_memory, engine);
@@ -87,10 +88,12 @@ class ElementwiseMulMKLDNNKernel : public framework::OpKernel<T> {
     UpdateDataFormat(ctx, const_cast<Tensor*>(x), "x_data_format");
     UpdateDataFormat(ctx, const_cast<Tensor*>(y), "y_data_format");
 
+    MKLDNNMemoryFormat x_format = platform::GetMKLDNNFormat(x->get_mkldnn_mem_desc());
+    MKLDNNMemoryFormat y_format = platform::GetMKLDNNFormat(y->get_mkldnn_mem_desc());
     const bool is_avx512_enabled = platform::MayIUse(platform::avx512f);
     const bool are_dims_divisable = !(x_int_dims[1] % 16);
-    const bool is_x_format_correct = x->format() == MKLDNNMemoryFormat::nChw16c;
-    const bool is_y_format_correct = y->format() == MKLDNNMemoryFormat::nc;
+    const bool is_x_format_correct = x_format == MKLDNNMemoryFormat::nChw16c;
+    const bool is_y_format_correct = y_format == MKLDNNMemoryFormat::nc;
     if (is_x_format_correct && is_y_format_correct && are_dims_divisable &&
         is_avx512_enabled) {
       int pre, n, post;
@@ -131,17 +134,16 @@ class ElementwiseMulMKLDNNKernel : public framework::OpKernel<T> {
         }
       }
 
-      z->set_layout(DataLayout::kMKLDNN);
-      z->set_format(x->format());
+      z->set_mkldnn_mem_desc(x->get_mkldnn_mem_desc());
     } else {
       // Fallback to naive version:
-      const bool are_inputs_in_same_format = x->format() == y->format();
-      const bool is_x_nchw = x->format() == MKLDNNMemoryFormat::nchw;
-      const bool is_x_nc = x->format() == MKLDNNMemoryFormat::nc;
-      const bool is_x_x = x->format() == MKLDNNMemoryFormat::x;
-      const bool is_y_nchw = y->format() == MKLDNNMemoryFormat::nchw;
-      const bool is_y_nc = y->format() == MKLDNNMemoryFormat::nc;
-      const bool is_y_x = y->format() == MKLDNNMemoryFormat::x;
+      const bool are_inputs_in_same_format = x->get_mkldnn_mem_desc() == y->get_mkldnn_mem_desc();
+      const bool is_x_nchw = x_format == MKLDNNMemoryFormat::nchw;
+      const bool is_x_nc = x_format == MKLDNNMemoryFormat::nc;
+      const bool is_x_x = x_format == MKLDNNMemoryFormat::x;
+      const bool is_y_nchw = y_format == MKLDNNMemoryFormat::nchw;
+      const bool is_y_nc = y_format == MKLDNNMemoryFormat::nc;
+      const bool is_y_x = y_format == MKLDNNMemoryFormat::x;
       if (!are_inputs_in_same_format) {
         using platform::MKLDNNDeviceContext;
         auto& dev_ctx = ctx.template device_context<MKLDNNDeviceContext>();
@@ -178,8 +180,7 @@ class ElementwiseMulMKLDNNKernel : public framework::OpKernel<T> {
       } else {
         functor.RunMidWise(n, pre, post);
       }
-      z->set_layout(DataLayout::kMKLDNN);
-      z->set_format(x->format());
+      z->set_mkldnn_mem_desc(x->get_mkldnn_mem_desc());
     }
   }
 };

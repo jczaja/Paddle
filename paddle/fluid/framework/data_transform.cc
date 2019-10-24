@@ -51,13 +51,32 @@ void TransformData(const OpKernelType &expected_kernel_type,
 #ifdef PADDLE_WITH_MKLDNN
         // Case1 - transform from Non-MKLDNN OPKernel to MKLDNN OPKernel
         // Just set layout/format. No real transform occur
-
+        
+        // TODO(jczaja): Remove that once all mkldnn ops
+        // are modified to work with mkldnn_blocked
+        out.set_format(out_format);
+        auto mkldnn_fmt = [&](int rank) {
+          switch (rank) {
+            case 5:
+              return mkldnn::memory::format::ncdhw;
+            case 4:
+              return mkldnn::memory::format::nchw;
+            case 3:
+              return mkldnn::memory::format::ncw;
+            case 2:
+              return mkldnn::memory::format::nc;
+            case 1:
+              return mkldnn::memory::format::x;
+            default:
+              return mkldnn::memory::format::blocked;
+          }
+        };
         auto out_format = platform::MKLDNNFormatForSize(in.dims().size(),
                                                         ToMKLDNNFormat(lin));
+        auto out_mem_md = mkldnn::memory::desc(paddle::framework::vectorize2int(out.dims()), in.type(), mkldnn_fmt(out.dims().size()));
 
         out.ShareDataWith(input_tensor);
-        out.set_layout(DataLayout::kMKLDNN);
-        out.set_format(out_format);
+        out.set_mkldnn_mem_desc(out_mem_md);
 #endif
       } else {
         // Case2 - transfrom from MKLDNN OPKernel to Non-MKLDNN OPKernel

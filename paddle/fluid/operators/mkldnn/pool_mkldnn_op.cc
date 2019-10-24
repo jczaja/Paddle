@@ -43,8 +43,6 @@ class PoolMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
 
     PADDLE_ENFORCE_EQ(input->layout(), DataLayout::kMKLDNN,
                       "Wrong layout set for Input tensor");
-    PADDLE_ENFORCE_NE(input->format(), MKLDNNMemoryFormat::undef,
-                      "Wrong format set for Input tensor");
 
     std::string pooling_type = ctx.Attr<std::string>("pooling_type");
 
@@ -78,7 +76,7 @@ class PoolMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
 
     platform::PoolingMKLDNNHandler<T> handler(
         src_tz, dst_tz, ksize, strides, paddings, pooling_type,
-        ctx.Attr<bool>("ceil_mode"), input->format(),
+        ctx.Attr<bool>("ceil_mode"), input->get_mkldnn_mem_desc(),
         paddle::framework::ToMKLDNNDataType(input->type()), is_test, dev_ctx,
         ctx.GetPlace(), ctx.op().Output("Out"), ctx.Attr<bool>("exclusive"));
 
@@ -101,8 +99,7 @@ class PoolMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
     }
     astream.wait();
 
-    output->set_layout(DataLayout::kMKLDNN);
-    output->set_format(platform::GetMKLDNNFormat(*dst_memory));
+    output->set_mkldnn_mem_desc(dst_memory->get_desc());
   }
 };
 
@@ -119,13 +116,8 @@ class PoolMKLDNNGradOpKernel : public paddle::framework::OpKernel<T> {
 
     PADDLE_ENFORCE_EQ(in_x->layout(), DataLayout::kMKLDNN,
                       "Wrong layout set for Input tensor");
-    PADDLE_ENFORCE_NE(in_x->format(), MKLDNNMemoryFormat::undef,
-                      "Wrong format set for Input tensor");
-
     PADDLE_ENFORCE_EQ(out_grad->layout(), DataLayout::kMKLDNN,
                       "Wrong layout set for Input output_grad tensor");
-    PADDLE_ENFORCE_NE(out_grad->format(), MKLDNNMemoryFormat::undef,
-                      "Wrong format set for Input output_grad tensor");
 
     PADDLE_ENFORCE_EQ(
         ctx.Attr<bool>("is_test"), false,
@@ -157,17 +149,10 @@ class PoolMKLDNNGradOpKernel : public paddle::framework::OpKernel<T> {
     auto diff_src_tz = paddle::framework::vectorize(in_x_grad->dims());
     auto diff_dst_tz = paddle::framework::vectorize(out_grad->dims());
 
-    // Get an unique name from "argument" name of "Out" variable
-    // This name will be used as key when referring info from device context
-    const std::string key = platform::CreateKey(
-        diff_src_tz, pooling_type, ksize, strides, paddings,
-        memory::data_type::f32, in_x->format(), ctx.op().Input("Out"));
-
     platform::PoolingMKLDNNHandler<T> handler(
         diff_dst_tz, diff_src_tz, ksize, strides, paddings, pooling_type,
-        ctx.Attr<bool>("ceil_mode"), in_x->format(), out_grad->format(),
-        paddle::framework::ToMKLDNNDataType(out_grad->type()), dev_ctx,
-        ctx.GetPlace(), ctx.op().Input("Out"), ctx.Attr<bool>("exclusive"));
+        ctx.Attr<bool>("ceil_mode"), out_grad->get_mkldnn_mem_desc(),
+    paddle::framework::ToMKLDNNDataType(out_grad->type()), dev_ctx, ctx.GetPlace(), ctx.op().Input("Out"), ctx.Attr<bool>("exclusive"));
 
     auto diff_dst_memory = handler.AcquireDiffDstMemory(out_grad);
     auto diff_src_memory = handler.AcquireDiffSrcMemory(in_x_grad);
@@ -188,8 +173,7 @@ class PoolMKLDNNGradOpKernel : public paddle::framework::OpKernel<T> {
     }
     astream.wait();
 
-    in_x_grad->set_layout(DataLayout::kMKLDNN);
-    in_x_grad->set_format(platform::GetMKLDNNFormat(*diff_src_memory));
+    in_x_grad->set_mkldnn_mem_desc(diff_src_memory->get_desc());
   }  // Compute()
 };
 

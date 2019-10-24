@@ -51,7 +51,7 @@ class FCPrimitiveFactory {
       UpdateDataPointers(ctx, output, input);
       return *fc_;
     }
-    auto src_desc = CreateMemDescriptor(input, input->format());
+    auto src_desc = input->get_mkldnn_mem_desc();
     input_ = CreateMemory(src_desc, input);
 
     weights_ = TransposeWeights(weights);
@@ -85,10 +85,11 @@ class FCPrimitiveFactory {
                           const Tensor* in) {
     input_->set_data_handle(const_cast<T*>(in->data<T>()));
     output_->set_data_handle(out->mutable_data<T>(ctx.GetPlace()));
-    if (out->format() == MKLDNNMemoryFormat::undef) {
-      auto output_format = platform::GetMKLDNNFormat(*output_);
-      out->set_format((MKLDNNMemoryFormat)output_format);
-    }
+    //Why this??
+//    if (out->format() == MKLDNNMemoryFormat::undef) {
+//      auto output_format = platform::GetMKLDNNFormat(*output_);
+ //     out->set_format((MKLDNNMemoryFormat)output_format);
+//    }
   }
 
   MKLDNNMemoryFormat MatchWeightFormat(MKLDNNMemoryFormat fmt) {
@@ -151,7 +152,7 @@ class FCPrimitiveFactory {
     const auto weights_desc = weights_memory.get_desc();
     const auto src_desc = src_memory.get_desc();
     if (bias) {
-      auto bias_desc = CreateMemDescriptor(bias, bias->format());
+      auto bias_desc = bias->get_mkldnn_mem_desc();
       bias_ = CreateMemory(bias_desc, bias);
       auto fc_prim_desc =
           CreateFcPrimDesc(src_desc, weights_desc, bias_desc, dst_desc);
@@ -196,7 +197,7 @@ class FCPrimitiveFactory {
     auto weight_dims = framework::vectorize(weights->dims());
     auto dims = {weight_dims[1], input_dims[1], input_dims[2], input_dims[3]};
 
-    auto dst_format = MatchWeightFormat(input->format());
+    auto dst_format = MatchWeightFormat(paddle::platform::GetMKLDNNFormat(input->get_mkldnn_mem_desc));
     auto src_desc = CreateMemDescriptor(dims, MKLDNNMemoryFormat::oihw);
     auto dst_desc = CreateMemDescriptor(dims, dst_format);
 
@@ -268,7 +269,7 @@ class FCMKLDNNOpKernel : public framework::OpKernel<T> {
     auto fc = prim_creator->CreateFcPrimitive(input, w, bias, output, ctx);
     prim_creator->Execute();
 
-    output->set_layout(DataLayout::kMKLDNN);
+    output->set_mkldnn_mem_desc(fc.dst_desc());
   }
 };
 }  // namespace operators

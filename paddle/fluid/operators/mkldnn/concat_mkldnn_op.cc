@@ -32,17 +32,7 @@ static void EnforceLayouts(const std::vector<const Tensor*> inputs) {
   for (auto* input : inputs) {
     PADDLE_ENFORCE_EQ(input->layout(), DataLayout::kMKLDNN,
                       "Wrong layout set for Input tensor");
-    PADDLE_ENFORCE_NE(input->format(), MKLDNNMemoryFormat::undef,
-                      "Wrong format set for Input tensor");
   }
-}
-
-static memory::desc CreateMemDesc(const Tensor& input,
-                                  const memory::data_type& dt) {
-  const auto dims = paddle::framework::vectorize(input.dims());
-  const auto format = input.format();
-  auto mem_desc = memory::desc(dims, dt, format);
-  return mem_desc;
 }
 
 static platform::CPUPlace GetCpuPlace(
@@ -103,7 +93,7 @@ class ConcatPrimitiveFactory {
                                 const mkldnn::engine& mkldnn_engine,
                                 const memory::data_type& dt) {
     for (size_t i = 0; i < multi_input.size(); i++) {
-      auto mem_desc = CreateMemDesc(*multi_input[i], dt);
+      auto mem_desc =  multi_input[i]->get_mkldnn_mem_desc();
       srcs_d.push_back(mem_desc);
       srcs.push_back(memory(mem_desc, mkldnn_engine,
                             to_void_cast(multi_input[i]->data<T>())));
@@ -182,8 +172,7 @@ class ConcatMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
     concat_p->execute(astream, args);
     astream.wait();
 
-    output->set_layout(DataLayout::kMKLDNN);
-    output->set_format(platform::GetMKLDNNFormat(*dst_mem));
+    output->set_mkldnn_mem_desc(dst_mem->get_desc());
   }
 };
 }  // namespace operators

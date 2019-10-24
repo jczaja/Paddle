@@ -51,7 +51,7 @@ class LRNMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
 
     auto dims = paddle::framework::vectorize(x->dims());
 
-    platform::LRNMKLDNNHandler<T> handler(dims, n, alpha, beta, k, x->format(),
+    platform::LRNMKLDNNHandler<T> handler(dims, n, alpha, beta, k, x->get_mkldnn_mem_desc(),
                                           is_test, dev_ctx, ctx.GetPlace(),
                                           ctx.op().Output("Out"));
 
@@ -80,8 +80,7 @@ class LRNMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
     }
     astream.wait();
 
-    out->set_layout(framework::DataLayout::kMKLDNN);
-    out->set_format(platform::GetMKLDNNFormat(*dst_memory));
+    out->set_mkldnn_mem_desc(dst_memory->get_desc());
   }
 };
 
@@ -113,7 +112,7 @@ class LRNMKLDNNGradOpKernel : public paddle::framework::OpKernel<T> {
     auto dims = paddle::framework::vectorize(x->dims());
 
     platform::LRNMKLDNNHandler<T> handler(
-        dims, n, alpha, beta, k, x->format(), out_grad->format(), dev_ctx,
+        dims, n, alpha, beta, k, x->get_mkldnn_mem_desc(), out_grad->get_mkldnn_mem_desc(), dev_ctx,
         ctx.GetPlace(), ctx.op().Input("Out"));
 
     auto src_memory = handler.AcquireSrcMemory(x);
@@ -130,8 +129,7 @@ class LRNMKLDNNGradOpKernel : public paddle::framework::OpKernel<T> {
                                {MKLDNN_ARG_WORKSPACE, *workspace}});
     astream.wait();
 
-    x_grad->set_layout(framework::DataLayout::kMKLDNN);
-    x_grad->set_format(platform::GetMKLDNNFormat(*diff_src_memory));
+    x_grad->set_mkldnn_mem_desc(diff_src_memory->get_desc());
   }
 };
 }  // namespace operators

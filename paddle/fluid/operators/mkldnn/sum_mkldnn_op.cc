@@ -65,7 +65,6 @@ class SumMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
 
       auto dst_tz = framework::vectorize(output->dims());
       auto src_tz = dst_tz;
-      MKLDNNMemoryFormat output_format{MKLDNNMemoryFormat::undef};
       std::vector<float> scales;
       std::vector<memory::desc> srcs_md;
       std::vector<mkldnn::memory> srcs_mem;
@@ -75,10 +74,6 @@ class SumMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
       auto& input0 = in_vars[0]->Get<LoDTensor>();
       PADDLE_ENFORCE_EQ(input0.layout(), DataLayout::kMKLDNN,
                         "Wrong layout set for inputs[0] tensor");
-      PADDLE_ENFORCE_NE(input0.format(), MKLDNNMemoryFormat::undef,
-                        "Wrong format set for inputs[0] tensor");
-
-      MKLDNNMemoryFormat input_format = input0.format();
 
       for (int i = 0; i < N; i++) {
         PADDLE_ENFORCE_EQ(in_vars[i]->IsType<LoDTensor>(), true,
@@ -86,8 +81,6 @@ class SumMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
         auto& input = in_vars[i]->Get<LoDTensor>();
         PADDLE_ENFORCE_EQ(input.layout(), DataLayout::kMKLDNN,
                           "Wrong layout set for inputs");
-        PADDLE_ENFORCE_NE(input.format(), MKLDNNMemoryFormat::undef,
-                          "Wrong format set for inputs");
 
         if (input.numel() == 0) {
           continue;
@@ -95,10 +88,8 @@ class SumMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
 
         const T* input_data = input.data<T>();
 
-        auto src_md =
-            memory::desc(src_tz, memory::data_type::f32, input_format);
-        auto src_mem = memory(src_md, mkldnn_engine, to_void_cast(input_data));
-        srcs_md.push_back(src_md);
+        auto src_mem = memory(input0.get_mkldnn_mem_desc(), mkldnn_engine, to_void_cast(input_data));
+        srcs_md.push_back(input0.get_mkldnn_mem_desc());
         srcs_mem.push_back(src_mem);
         scales.push_back(1.0);
       }
@@ -117,15 +108,12 @@ class SumMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
       }
 
       auto sum_prim = mkldnn::sum(sum_pd);
-      output_format = platform::GetMKLDNNFormat(sum_pd.dst_desc());
 
       std::shared_ptr<mkldnn::reorder> reorder_p;
       std::shared_ptr<memory> target_mem;
       if (in_place) {
-        output_format = input_format;
         target_mem.reset(
-            new memory({{src_tz}, memory::data_type::f32, output_format},
-                       mkldnn_engine, output_data));
+            new memory(input0.get_mkldnn_mem_desc(), mkldnn_engine, output_data));
         reorder_p = std::make_shared<reorder>(*dst_mem, *target_mem);
       }
 
@@ -144,8 +132,7 @@ class SumMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
         astream.wait();
       }
 
-      output->set_layout(DataLayout::kMKLDNN);
-      output->set_format(output_format);
+      output->set_mkldnn_mem_desc(sum_pd.dst_desc());
     } else {  // Fallback to naive version
       SumKernel<CPUDeviceContext, T> reference_kernel;
       reference_kernel.Compute(ctx);

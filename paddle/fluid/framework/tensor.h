@@ -38,23 +38,36 @@ class Tensor {
 #ifdef PADDLE_WITH_MKLDNN
 
  public:
-  inline mkldnn::memory::format_tag format() const { return format_; }
 
-  inline void set_format(const mkldnn::memory::format_tag format) {
-    format_ = format;
+  inline mkldnn::memory::desc& get_mkldnn_mem_desc() const {
+    return mkldnn_mem_md_;
   }
 
+  inline void set_mkldnn_mem_desc(
+      const mkldnn::memory::desc& mem_md) {
+    // Internally MKL-DNN is just copying (increasing reference counter)
+    // to shared_ptr. So asignment should be quite cheap
+    mkldnn_mem_md_ = mem_md;
+    layout_ = DataLayout::kMKLDNN;
+  }
+
+  inline void reset_mkldnn_mem_desc() {
+    if (layout_ == DataLayout::kMKLDNN) {
+      layout_ = DataLayout::kNCHW;
+      mkldnn_mem_md_ = mkldnn::memory::desc();
+    }
+  }
  protected:
   /**
    * @brief the detail format of memory block which have layout as kMKLDNN
    *
    * @note MKLDNN lib support various memory format like nchw, nhwc, nChw8C,
    *       nChw16c, etc. For a MKLDNN memory block, layout will be set as
-   *       DataLayout::kMKLDNN meanwhile detail memory format will be kept in
+   *       DataLayout::kMKLDNN meanwhile detail memory desc will be kept in
    *       this field.
    */
 
-  mkldnn::memory::format_tag format_ = mkldnn::memory::format_tag::undef;
+  mkldnn::memory::desc mkldnn_mem_md_;
 #endif
 
  public:

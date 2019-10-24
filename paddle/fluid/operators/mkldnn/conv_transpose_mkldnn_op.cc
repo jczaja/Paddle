@@ -47,13 +47,9 @@ class ConvTransposeMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
 
     PADDLE_ENFORCE_EQ(input->layout(), DataLayout::kMKLDNN,
                       "Wrong layout set for Input tensor");
-    PADDLE_ENFORCE_NE(input->format(), MKLDNNMemoryFormat::undef,
-                      "Wrong format set for Input tensor");
 
     PADDLE_ENFORCE_EQ(filter->layout(), DataLayout::kMKLDNN,
                       "Wrong layout set for Filter tensor");
-    PADDLE_ENFORCE_NE(filter->format(), MKLDNNMemoryFormat::undef,
-                      "Wrong format set for Filter tensor");
 
     PADDLE_ENFORCE_EQ(input->dims().size(), 4,
                       "Input must be with 4 dimensions, i.e. NCHW");
@@ -63,8 +59,6 @@ class ConvTransposeMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
     if (bias) {
       PADDLE_ENFORCE_EQ(bias->layout(), DataLayout::kMKLDNN,
                         "Wrong layout set for Bias tensor");
-      PADDLE_ENFORCE_NE(bias->format(), MKLDNNMemoryFormat::undef,
-                        "Wrong format set for Bias tensor");
 
       PADDLE_ENFORCE_EQ(bias->dims().size(), 1,
                         "Bias must only have 1 dimension, i.e. X");
@@ -138,12 +132,6 @@ class ConvTransposeMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
 
     std::vector<mkldnn::primitive> pipeline;
 
-    auto user_src_md = platform::MKLDNNMemDesc(
-        {src_tz}, platform::MKLDNNGetDataType<T>(), input->format());
-    auto user_weights_md = platform::MKLDNNMemDesc(
-        {weights_tz}, platform::MKLDNNGetDataType<T>(),
-        (g == 1) ? MKLDNNMemoryFormat::oihw : MKLDNNMemoryFormat::goihw);
-
     /* create memory descriptor for convolution without specified format
      * ('any') which lets a primitive (convolution in this case) choose
      * the memory format preferred for best performance
@@ -172,10 +160,8 @@ class ConvTransposeMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
                                  : mkldnn::prop_kind::forward_training;
     if (bias) {
       bias_tz = paddle::framework::vectorize(bias->dims());
-      auto bias_md = platform::MKLDNNMemDesc(
-          bias_tz, platform::MKLDNNGetDataType<T>(), MKLDNNMemoryFormat::x);
       conv_transpose_pd = handler.AcquireConvolutionPrimitiveDescriptor(
-          src_md, weights_md, bias_md, dst_md, strides, paddings, mkldnn_engine,
+          src_md, weights_md, bias->get_mkldnn_mem_desc(), dst_md, strides, paddings, mkldnn_engine,
           fuse_activation, fuse_alpha, fuse_beta, false, fwd_prop_kind);
     } else {
       conv_transpose_pd = handler.AcquireConvolutionPrimitiveDescriptor(
@@ -186,10 +172,10 @@ class ConvTransposeMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
 
     // create mkldnn memory from input tensors (data/weights)
     auto user_src_memory_p = handler.AcquireSrcMemory(
-        user_src_md, platform::to_void_cast<T>(input_data));
+        input->get_mkldnn_mem_desc(), platform::to_void_cast<T>(input_data));
     auto user_weights_memory_p = handler.AcquireWeightsMemory(
-        user_weights_md, platform::to_void_cast<T>(filter_data),
-        is_test ? iohw2oihw_reorder : platform::user_function());
+        (g == 1) ? filter->get_mkldnn_mem_desc() : platform::MKLDNNMemDesc( {weights_tz}, platform::MKLDNNGetDataType<T>(), MKLDNNMemoryFormat::goihw),
+     platform::to_void_cast<T>(filter_data), is_test ? iohw2oihw_reorder : platform::user_function());
 
     // create reorder primitive if the input format is not the preferred one
     auto src_memory_p =
@@ -226,8 +212,7 @@ class ConvTransposeMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
     }
     astream.wait();
 
-    output->set_layout(DataLayout::kMKLDNN);
-    output->set_format(platform::GetMKLDNNFormat(*dst_memory_p));
+    output->set_mkldnn_mem_desc(dst_memory_p->get_desc());
   }
 };
 

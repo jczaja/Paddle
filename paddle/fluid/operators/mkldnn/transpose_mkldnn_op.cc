@@ -52,7 +52,7 @@ class TransposeMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
                                              mkldnn_engine, key);
 
     auto transpose_src_memory_p = handler.AcquireSrcMemory(
-        input->format(), platform::to_void_cast<T>(input_data));
+        input->get_mkldnn_mem_desc(), platform::to_void_cast<T>(input_data));
     auto transpose_dst_memory_p =
         handler.AcquireDstMemory(output, ctx.GetPlace());
     auto transpose_p = handler.AcquireTranspose(transpose_dst_memory_p,
@@ -63,8 +63,7 @@ class TransposeMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
                          *transpose_dst_memory_p);
     astream.wait();
 
-    output->set_layout(DataLayout::kNCHW);
-    output->set_format(MKLDNNMemoryFormat::undef);
+    output->set_mkldnn_mem_desc(transpose_dst_memory_p->get_desc());
   }
 };
 
@@ -106,7 +105,7 @@ class TransposeMKLDNNGradOpKernel : public paddle::framework::OpKernel<T> {
                                              mkldnn_engine, key);
 
     auto transpose_src_memory_p = handler.AcquireSrcMemory(
-        out_grad->format(), platform::to_void_cast<T>(out_grad_data));
+        out_grad->get_mkldnn_mem_desc(), platform::to_void_cast<T>(out_grad_data));
     auto transpose_dst_memory_p =
         handler.AcquireDstMemory(x_grad, ctx.GetPlace());
     auto transpose_p = handler.AcquireTranspose(transpose_dst_memory_p,
@@ -116,6 +115,8 @@ class TransposeMKLDNNGradOpKernel : public paddle::framework::OpKernel<T> {
     transpose_p->execute(astream, *transpose_src_memory_p,
                          *transpose_dst_memory_p);
     astream.wait();
+
+    x_grad->set_mkldnn_mem_desc(transpose_dst_memory_p->get_desc());
   }
 };
 

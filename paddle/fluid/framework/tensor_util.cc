@@ -44,6 +44,12 @@ void TensorCopy(const Tensor& src, const platform::Place& dst_place,
               << dst_place;
       return;
     }
+#ifdef PADDLE_WITH_MKLDNN
+    // When MKL-DNN Tensor is copied its memory_descriptor has to be copied as well
+    if (src.layout() == DataLayout::kMKLDNN) {
+      dst->set_mkldnn_mem_desc(src.get_mkldnn_mem_desc());
+    }
+#endif
     memory::Copy(boost::get<platform::CPUPlace>(dst_place), dst_ptr,
                  boost::get<platform::CPUPlace>(src_place), src_ptr, size);
   }

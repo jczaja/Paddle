@@ -87,10 +87,11 @@ class MulPrimitiveFactory {
                           const ExecutionContext &ctx) {
     Tensor x_tmp;
     Tensor data_matrix;
-    MKLDNNMemoryFormat src_fmt = data->format();
+    MKLDNNMemoryFormat src_fmt = platform::GetMKLDNNFormat(data->get_mkldnn_mem_desc());
     MKLDNNMemoryFormat dst_fmt;
-    auto src_mdesc = CreateMemDescriptor<T>(data, src_fmt);
 
+    // 4D amd 5D data arrangements can be of blocked format (NCHW16C, NCHW8C..)
+    // So in order to flatten them they should be reordered to NCHW or NCDHW
     if ((data->dims().size() == 4 &&
          src_fmt != (dst_fmt = MKLDNNMemoryFormat::nchw)) ||
         (data->dims().size() == 5 &&
@@ -98,11 +99,11 @@ class MulPrimitiveFactory {
       auto dst_mdesc = CreateMemDescriptor<T>(data, dst_fmt);
       x_tmp.mutable_data<T>(ctx.GetPlace(), data->memory_size());
 
-      Reorder(src_mdesc, dst_mdesc, to_void_cast<T>(data->data<T>()),
+      //TODO(jczaja): Reimplement with ReorderMKLDNNHandler
+      Reorder(data->get_mkldnn_mem_desc(), dst_mdesc, to_void_cast<T>(data->data<T>()),
               to_void_cast<T>(x_tmp.data<T>()));
 
       x_tmp.Resize(data->dims());
-      x_tmp.set_format(platform::GetMKLDNNFormat(dst_mdesc));
       data_matrix = framework::ReshapeToMatrix(x_tmp, num_col_dims);
     } else {
       data_matrix = framework::ReshapeToMatrix(*data, num_col_dims);
@@ -115,11 +116,6 @@ class MulPrimitiveFactory {
                           const Tensor *in) {
     x_input_->set_data_handle(to_void_cast<XT>(in->data<XT>()));
     output_->set_data_handle(out->mutable_data<OT>(ctx.GetPlace()));
-
-    if (out->format() == MKLDNNMemoryFormat::undef) {
-      auto output_format = platform::GetMKLDNNFormat(*output_);
-      out->set_format((MKLDNNMemoryFormat)output_format);
-    }
   }
 
   template <typename T>
@@ -354,6 +350,7 @@ std::shared_ptr<MulPrimitiveFactory<XT, YT, OT>> GetPrimitiveFactory(
     const MKLDNNDeviceContext &dev_ctx, const ExecutionContext &ctx,
     const Tensor *input_x, const Tensor *input_y,
     const mkldnn::engine &mkldnn_engine, bool enable_quant) {
+  //TODO(jczaja): remove dummy X from key
   const std::string key = platform::CreateKey(
       input_x->type(), framework::vectorize(input_x->dims()), input_y->type(),
       framework::vectorize(input_y->dims()), ctx.op().Output("Out"));
@@ -415,10 +412,11 @@ class MulMKLDNNKernel : public framework::OpKernel<XT> {
 
     if (out_dims.size() != 2) {
       out->Resize(out_dims);
+      // perhaps it was flattened
+      out->set_mkldnn_mem_desc(out_dims, out->type(),platform::MKLDNNFormatForSize(out_dims.size(), MKLDNNMemoryFormat::nchw));
+    } else {
+      out->set_mkldnn_mem_desc(mul->dst_desc());
     }
-    out->set_layout(DataLayout::kMKLDNN);
-    out->set_format(platform::MKLDNNFormatForSize(out_dims.size(),
-                                                  MKLDNNMemoryFormat::nchw));
   }
 };
 
