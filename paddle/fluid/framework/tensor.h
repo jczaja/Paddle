@@ -39,7 +39,7 @@ class Tensor {
 
  public:
 
-  inline mkldnn::memory::desc& get_mkldnn_mem_desc() const {
+  inline const mkldnn::memory::desc& get_mkldnn_mem_desc() const {
     return mkldnn_mem_md_;
   }
 

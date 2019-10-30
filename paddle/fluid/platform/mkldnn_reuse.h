@@ -411,7 +411,7 @@ class ActivationMKLDNNHandler
  public:
   ActivationMKLDNNHandler(const std::vector<int64_t>& dims,
                           mkldnn::algorithm algorithm, float alpha, float beta,
-                          const MKLDNNMemoryDesc& md, bool is_test,
+                          const MKLDNNMemDesc& md, bool is_test,
                           const platform::MKLDNNDeviceContext& dev_ctx,
                           platform::Place cpu_place,
                           const std::string& unique_name)
@@ -427,8 +427,8 @@ class ActivationMKLDNNHandler
 
   ActivationMKLDNNHandler(const std::vector<int64_t>& dims,
                           mkldnn::algorithm algorithm, float alpha, float beta,
-                          const MKLDNNMemoryDesc& md,
-                          const MKLDNNMemoryDesc diff_md,
+                          const MKLDNNMemDesc& md,
+                          const MKLDNNMemDesc diff_md,
                           const platform::MKLDNNDeviceContext& dev_ctx,
                           platform::Place cpu_place,
                           const std::string& unique_name)
@@ -457,7 +457,7 @@ class LRNMKLDNNHandler
  public:
   LRNMKLDNNHandler(const std::vector<int64_t>& dims, const int n,
                    const float alpha, const float beta, const float k,
-                   const MKLDNNMemoryDesc& src_md, bool is_test,
+                   const MKLDNNMemDesc& src_md, bool is_test,
                    const platform::MKLDNNDeviceContext& dev_ctx,
                    platform::Place cpu_place, const std::string& unique_name)
       : platform::MKLDNNHandlerT<T, mkldnn::lrn_forward, mkldnn::lrn_backward>(
@@ -472,8 +472,8 @@ class LRNMKLDNNHandler
 
   LRNMKLDNNHandler(const std::vector<int64_t>& dims, const int n,
                    const float alpha, const float beta, const float k,
-                   const MKLDNNMemoryDesc& src_md,
-                   const MKLDNNMemoryDesc& diff_md,
+                   const MKLDNNMemDesc& src_md,
+                   const MKLDNNMemDesc& diff_md,
                    const platform::MKLDNNDeviceContext& dev_ctx,
                    platform::Place cpu_place, const std::string& unique_name)
 
@@ -512,7 +512,7 @@ class PoolingMKLDNNHandler : public MKLDNNHandlerT<T, mkldnn::pooling_forward,
       const std::vector<int64_t>& dst_dims, const std::vector<int64_t>& ksize,
       const std::vector<int64_t>& strides, const std::vector<int64_t>& paddings,
       const std::string& pooling_type, bool ceil_mode,
-      const MKLDNNMemoryDesc& src_md, mkldnn::memory::data_type dt, bool is_test,
+      const MKLDNNMemDesc& src_md, mkldnn::memory::data_type dt, bool is_test,
       const platform::MKLDNNDeviceContext& dev_ctx, platform::Place cpu_place,
       const std::string& unique_name, bool exclude_padding)
       : platform::MKLDNNHandlerT<T, mkldnn::pooling_forward,
@@ -549,7 +549,7 @@ class PoolingMKLDNNHandler : public MKLDNNHandlerT<T, mkldnn::pooling_forward,
       const std::vector<int64_t>& diff_src_dims,
       const std::vector<int64_t>& ksize, const std::vector<int64_t>& strides,
       const std::vector<int64_t>& paddings, const std::string& pooling_type,
-      bool ceil_mode, const MKLDNNMemoryDesc& diff_dst_md, mkldnn::memory::data_type dt,
+      bool ceil_mode, const MKLDNNMemDesc& diff_dst_md, mkldnn::memory::data_type dt,
       const platform::MKLDNNDeviceContext& dev_ctx, platform::Place cpu_place,
       const std::string& unique_name, bool exclude_padding)
       : platform::MKLDNNHandlerT<T, mkldnn::pooling_forward,
@@ -786,7 +786,7 @@ class ConvMKLDNNTemplateHandler : public MKLDNNHandler {
 
   size_t GetDstMemorySize() const { return conv_pd_->dst_desc().get_size(); }
 
-  MKLDNNMemoryDesc& GetDstDesc() const {
+  MKLDNNMemDesc& GetDstDesc() const {
     return conv_pd_->dst_desc();
   }
 
