@@ -151,7 +151,7 @@ void innerTransDataLayoutFromMKLDNN(DataLayout in_layout, DataLayout out_layout,
                     "Input tensor type is not supported: %s", in.type());
 
   //TODO: Make pregenerated strides for 1 - 5 dims
-  auto out_mem_desc = mkldnn::memory::desc(in_tz,in.type(),
+  auto out_mem_desc = mkldnn::memory::desc(in_tz, in_type,
     platform::MKLDNNFormatForSize(in_tz.size(), ToMKLDNNFormat(out_layout)));
 
   // output tensor has the same dims as input. Reorder don't change dims
