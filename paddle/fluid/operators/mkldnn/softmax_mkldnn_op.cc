@@ -39,7 +39,7 @@ class SoftmaxMKLDNNHandler
                                       mkldnn::softmax_backward> {
  public:
   SoftmaxMKLDNNHandler(const std::vector<int64_t>& dims,
-                       const MKLDNNMemoryDesc& md, const int& axis,
+                       const MKLDNNMemoryDescriptor& md, const int& axis,
                        const platform::MKLDNNDeviceContext& dev_ctx,
                        platform::Place cpu_place, const std::string& uniq_name)
       : platform::MKLDNNHandlerT<T, mkldnn::softmax_forward,
@@ -51,8 +51,8 @@ class SoftmaxMKLDNNHandler
   }
 
   SoftmaxMKLDNNHandler(const std::vector<int64_t>& dims,
-                       const MKLDNNMemoryDesc& md,
-                       const MKLDNNMemoryDesc& diff_md,
+                       const MKLDNNMemoryDescriptor& md,
+                       const MKLDNNMemoryDescriptor& diff_md,
                        const int& axis,
                        const platform::MKLDNNDeviceContext& dev_ctx,
                        platform::Place cpu_place, const std::string& uniq_name)
