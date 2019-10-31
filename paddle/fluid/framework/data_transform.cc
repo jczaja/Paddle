@@ -52,7 +52,7 @@ void TransformData(const OpKernelType &expected_kernel_type,
         // Case1 - transform from Non-MKLDNN OPKernel to MKLDNN OPKernel
         // Just set layout/format. No real transform occur
         
-        auto out_mem_md = mkldnn::memory::desc(paddle::framework::vectorize2int(out.dims()), ToMKLDNNDataType(in.type()), {});
+        auto out_mem_md = mkldnn::memory::desc(paddle::framework::vectorize(out.dims()), ToMKLDNNDataType(in.type()), {});
 
         out.ShareDataWith(input_tensor);
         out.set_mkldnn_mem_desc(out_mem_md);
