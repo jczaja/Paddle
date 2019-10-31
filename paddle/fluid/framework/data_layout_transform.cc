@@ -150,16 +150,15 @@ void innerTransDataLayoutFromMKLDNN(DataLayout in_layout, DataLayout out_layout,
   PADDLE_ENFORCE_NE(in_type, memory::data_type::undef,
                     "Input tensor type is not supported: %s", in.type());
 
-  //TODO: Make pregenerated strides for 1 - 5 dims
-  auto out_mem_desc = mkldnn::memory::desc(in_tz, in_type,
-    platform::MKLDNNFormatForSize(in_tz.size(), ToMKLDNNFormat(out_layout)));
+  auto out_mem_desc = mkldnn::memory::desc(out_tz, in.type(), {});
 
   // output tensor has the same dims as input. Reorder don't change dims
   out->Resize(in.dims());
 
   if (in.get_mkldnn_mem_desc() != out_mem_desc) {
-    auto in_format = platform::MKLDNNFormatForSize(in_tz.size(), in.format());
+    auto in_format = platform::GetMKLDNNFormat(in.get_mkldnn_mem_desc());
     void* in_data = GetDataFromTensor(in, in_type);
+
     //TODO: Instead of in_format and out_format , we can use strides
     const std::string key =
         platform::CreateKey(in_tz, in_format, 
@@ -169,7 +168,8 @@ void innerTransDataLayoutFromMKLDNN(DataLayout in_layout, DataLayout out_layout,
     platform::ReorderMKLDNNHandler handler(in_tz, in.type(), in_type, *dev_ctx,
                                            cpu_engine, key);
 
-    auto reorder_src_memory_p = handler.AcquireSrcMemory(in_format, in_data);
+    auto reorder_src_memory_p = handler.AcquireSrcMemory(
+        in.get_mkldnn_mem_desc(), in_data);
     auto reorder_dst_memory_p =
         handler.AcquireDstMemory(out, out_format, place);
     auto reorder_p =

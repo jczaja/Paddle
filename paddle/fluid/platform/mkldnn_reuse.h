@@ -692,11 +692,6 @@ class ReorderMKLDNNHandler : public MKLDNNHandler {
         vtype_(vtype),
         dtype_(dtype) {}
 
-  std::shared_ptr<mkldnn::memory> AcquireSrcMemory(
-      const MKLDNNMemoryFormat& fmt, void* ptr) {
-    return this->AcquireMemory(dims_, dtype_, fmt, ptr, "@user_src_mem_p");
-  }
-
   std::shared_ptr<mkldnn::memory> AcquireDstMemory(
       framework::Tensor* output, const MKLDNNMemoryFormat& fmt,
       platform::Place place) {
