@@ -40,7 +40,7 @@ static void UpdateDataFormat(const framework::ExecutionContext& ctx,
     if (format != MKLDNNMemoryFormat::any) {
       auto dims = paddle::framework::vectorize(tensor->dims());
       auto md = mkldnn::memory::desc(dims, platform::MKLDNNGetDataType<T>(), format);
-      tensor->set_mkldnn_mem_desc();
+      tensor->set_mkldnn_mem_desc(md);
     }
   }
 }
