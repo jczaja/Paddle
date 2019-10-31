@@ -70,20 +70,19 @@ class EltwiseAddMKLDNNKernel : public framework::OpKernel<T> {
         _x.Resize(x_dims);
 
         mkldnn::memory::data_type in_type = platform::MKLDNNGetDataType<T>();
-        auto out_format = platform::MKLDNNFormatForSize(
-            x_dims.size(), MKLDNNMemoryFormat::nchw);
+        auto out_md = mkldnn::memory::desc(src_x_tz, in_type, {});
 
         const std::string key =
-            platform::CreateKey(src_x_tz, x_format, out_format, in_type);
+            platform::CreateKey(src_x_tz, x_format, platform::GetMKLDNNFormat(out_md), in_type);
 
         platform::ReorderMKLDNNHandler handler(src_x_tz, x->type(), in_type,
                                                dev_ctx, mkldnn_engine, key);
 
         auto user_x_memory_p = handler.AcquireSrcMemory(
-            x_format, paddle::platform::to_void_cast(x_data));
+            x->get_mkldnn_mem_desc(), paddle::platform::to_void_cast(x_data));
 
         auto x_memory_p =
-            handler.AcquireDstMemory(&_x, out_format, ctx.GetPlace());
+            handler.AcquireDstMemory(&_x, out_md, ctx.GetPlace());
 
         auto x_reorder = handler.AcquireReorder(x_memory_p, user_x_memory_p);
 
