@@ -171,7 +171,7 @@ void innerTransDataLayoutFromMKLDNN(DataLayout in_layout, DataLayout out_layout,
     auto reorder_src_memory_p = handler.AcquireSrcMemory(
         in.get_mkldnn_mem_desc(), in_data);
     auto reorder_dst_memory_p =
-        handler.AcquireDstMemory(out, out_format, place);
+        handler.AcquireDstMemory(out, out_mem_desc, place);
     auto reorder_p =
         handler.AcquireReorder(reorder_dst_memory_p, reorder_src_memory_p);
 

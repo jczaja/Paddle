@@ -693,14 +693,12 @@ class ReorderMKLDNNHandler : public MKLDNNHandler {
         dtype_(dtype) {}
 
   std::shared_ptr<mkldnn::memory> AcquireDstMemory(
-      framework::Tensor* output, const MKLDNNMemoryFormat& fmt,
+      framework::Tensor* output, const MKLDNNMemoryDescriptor& dst_md,
       platform::Place place) {
     auto local_key = key_ + "@user_dst_mem_p";
     auto mem_p =
         std::static_pointer_cast<mkldnn::memory>(dev_ctx_.GetBlob(local_key));
     if (mem_p == nullptr) {
-      auto dst_md = platform::MKLDNNMemoryDescriptor(dims_, dtype_, fmt);
-
       auto dst_data = output->mutable_data(place, vtype_);
 
       mem_p = std::make_shared<mkldnn::memory>(dst_md, engine_, dst_data);
