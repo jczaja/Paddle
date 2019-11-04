@@ -197,7 +197,7 @@ class FCPrimitiveFactory {
     auto weight_dims = framework::vectorize(weights->dims());
     auto dims = {weight_dims[1], input_dims[1], input_dims[2], input_dims[3]};
 
-    auto dst_format = MatchWeightFormat(paddle::platform::GetMKLDNNFormat(input->get_mkldnn_mem_desc));
+    auto dst_format = MatchWeightFormat(paddle::platform::GetMKLDNNFormat(input->get_mkldnn_mem_desc()));
     auto src_desc = CreateMemDescriptor(dims, MKLDNNMemoryFormat::oihw);
     auto dst_desc = CreateMemDescriptor(dims, dst_format);
 
