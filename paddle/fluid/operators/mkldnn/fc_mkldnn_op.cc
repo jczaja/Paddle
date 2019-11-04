@@ -269,7 +269,7 @@ class FCMKLDNNOpKernel : public framework::OpKernel<T> {
     auto fc = prim_creator->CreateFcPrimitive(input, w, bias, output, ctx);
     prim_creator->Execute();
 
-    output->set_mkldnn_mem_desc(fc.dst_desc());
+    output->set_mkldnn_mem_desc(fc.get_primitive_desc().dst_desc());
   }
 };
 }  // namespace operators
