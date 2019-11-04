@@ -60,6 +60,7 @@ class EltwiseAddMKLDNNKernel : public framework::OpKernel<T> {
       Tensor _x;
       auto src_x_tz = framework::vectorize(x_dims);
       MKLDNNMemoryFormat format;
+      mkldnn::memory::data_type in_type = platform::MKLDNNGetDataType<T>();
 
       if ((src_x_tz.size() == 3 &&
            x_format != (format = MKLDNNMemoryFormat::ncw)) ||
@@ -69,7 +70,6 @@ class EltwiseAddMKLDNNKernel : public framework::OpKernel<T> {
            x_format != (format = MKLDNNMemoryFormat::ncdhw))) {
         _x.Resize(x_dims);
 
-        mkldnn::memory::data_type in_type = platform::MKLDNNGetDataType<T>();
         auto out_md = mkldnn::memory::desc(src_x_tz, in_type, {});
 
         const std::string key =
