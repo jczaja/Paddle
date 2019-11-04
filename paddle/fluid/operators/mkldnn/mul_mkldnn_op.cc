@@ -413,7 +413,8 @@ class MulMKLDNNKernel : public framework::OpKernel<XT> {
     if (out_dims.size() != 2) {
       out->Resize(out_dims);
       // perhaps it was flattened
-      out->set_mkldnn_mem_desc({out_dims, out->type(),platform::MKLDNNFormatForSize(out_dims.size(), MKLDNNMemoryFormat::nchw)});
+      memory::data_type out_type = ToMKLDNNDataType(out->type());
+      out->set_mkldnn_mem_desc({out_dims, out_type, platform::MKLDNNFormatForSize(out_dims.size(), MKLDNNMemoryFormat::nchw)});
     } else {
       out->set_mkldnn_mem_desc(mul->dst_desc());
     }
