@@ -33,7 +33,7 @@ class BatchNormMKLDNNHandler
  public:
   BatchNormMKLDNNHandler(const std::vector<int64_t> &dims, const float &epsilon,
                          const mkldnn::normalization_flags &flags,
-                         const bool &global_stats, const MKLDNNMemoryDescriptor& md,
+                         const bool &global_stats, const mkldnn::memory::desc& md,
                          const platform::MKLDNNDeviceContext &dev_ctx,
                          platform::Place cpu_place,
                          const std::string &uniq_name)
@@ -48,8 +48,8 @@ class BatchNormMKLDNNHandler
   }
   BatchNormMKLDNNHandler(const std::vector<int64_t> &dims, const float &epsilon,
                          const mkldnn::normalization_flags &flags,
-                         const MKLDNNMemoryDescriptor& diff_md,
-                         const MKLDNNMemoryDescriptor& md,
+                         const mkldnn::memory::desc& diff_md,
+                         const mkldnn::memory::desc& md,
                          const platform::MKLDNNDeviceContext &dev_ctx,
                          platform::Place cpu_place,
                          const std::string &uniq_name)

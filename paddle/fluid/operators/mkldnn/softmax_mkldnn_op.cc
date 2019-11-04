@@ -23,7 +23,6 @@ namespace operators {
 
 using paddle::framework::Tensor;
 using paddle::platform::MKLDNNDeviceContext;
-using paddle::platform::MKLDNNMemDesc;
 
 using mkldnn::memory;  // Note: paddle has also "memory" namespace
 using mkldnn::primitive;
