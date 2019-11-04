@@ -80,6 +80,10 @@ class FCPrimitiveFactory {
     astream.wait();
   }
 
+  mkldnn::memory::desc& GetOutputMemoryDescriptor(void) {
+    return output_.get_desc();
+  }
+
  private:
   void UpdateDataPointers(const ExecutionContext& ctx, Tensor* out,
                           const Tensor* in) {
@@ -269,7 +273,7 @@ class FCMKLDNNOpKernel : public framework::OpKernel<T> {
     auto fc = prim_creator->CreateFcPrimitive(input, w, bias, output, ctx);
     prim_creator->Execute();
 
-    output->set_mkldnn_mem_desc(fc.get_primitive_desc()->dst_desc());
+    output->set_mkldnn_mem_desc(prim_creator->GetOutputMemoryDescriptor());
   }
 };
 }  // namespace operators
