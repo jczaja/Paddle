@@ -81,7 +81,7 @@ class FCPrimitiveFactory {
   }
 
   mkldnn::memory::desc& GetOutputMemoryDescriptor(void) {
-    return output_.get_desc();
+    return *output_.get_desc();
   }
 
  private:
