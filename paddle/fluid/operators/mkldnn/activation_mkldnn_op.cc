@@ -35,9 +35,6 @@ class MKLDNNActivationKernel
     const auto *x = ctx.Input<Tensor>("X");
     PADDLE_ENFORCE_EQ(x->layout(), DataLayout::kMKLDNN,
                       "Wrong layout set for X tensor");
-    PADDLE_ENFORCE_NE(x->format(), MKLDNNMemoryFormat::undef,
-                      "Wrong format set for X tensor");
-
     Functor functor;
     functor(ctx);
   }
@@ -51,9 +48,6 @@ class MKLDNNActivationGradKernel
     const auto *diff_y = ctx.Input<Tensor>(framework::GradVarName("Out"));
     PADDLE_ENFORCE_EQ(diff_y->layout(), DataLayout::kMKLDNN,
                       "Wrong layout set for Input OutGrad tensor");
-    PADDLE_ENFORCE_NE(diff_y->format(), MKLDNNMemoryFormat::undef,
-                      "Wrong format set for Input OutGrad tensor");
-
     PADDLE_ENFORCE_EQ(
         ctx.Attr<bool>("is_test"), false,
         "is_test attribute should be set to False in training phase.");
