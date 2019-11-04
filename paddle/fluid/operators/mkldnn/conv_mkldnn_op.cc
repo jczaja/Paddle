@@ -197,7 +197,7 @@ class ConvMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
     const std::string key = platform::CreateKey(
         src_tz, ctx.op().Input("Input") + ctx.op().Input("Filter"));
 
-    auto user_weights_md = GetWeightsMemDesc(filter, weights_tz, g, is_conv3d);
+    auto user_weights_md = GetWeightsMemDesc(*filter, weights_tz, g, is_conv3d);
 
     /* create memory descriptor for convolution without specified format
      * ('any') which lets a primitive (convolution in this case) choose
@@ -725,7 +725,7 @@ class ConvMKLDNNGradOpKernel : public paddle::framework::OpKernel<T> {
     GetWeightsTz(weights_tz, g, is_conv3d);
     auto dst_tz = paddle::framework::vectorize(output_grad->dims());
 
-    auto user_weights_md = GetWeightsMemDesc(filter, weights_tz, g, is_conv3d);
+    auto user_weights_md = GetWeightsMemDesc(*filter, weights_tz, g, is_conv3d);
 
     // Get an unique name from "argument" name of "input" and "Filter" variable
     // as well as attributes of primitive to be created
