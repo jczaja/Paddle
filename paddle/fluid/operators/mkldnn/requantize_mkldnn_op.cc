@@ -76,7 +76,7 @@ class ReQuantOpKernel : public framework::OpKernel<T> {
     reorder_p->execute(astream, *src_memory, dst_memory);
     astream.wait();
 
-    output->set_mkldnn_mem_desc(dst_memory->get_desc());
+    output->set_mkldnn_mem_desc(dst_memory.get_desc());
   }
 };
 
