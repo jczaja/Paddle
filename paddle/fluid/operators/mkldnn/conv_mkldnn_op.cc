@@ -317,8 +317,7 @@ class ConvMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
     }
     astream.wait();
 
-    output->set_layout(DataLayout::kMKLDNN);
-    output->set_format(GetMKLDNNFormat(*dst_memory_p));
+    output->set_mkldnn_mem_desc(dst_memory_p->get_desc());
   }
   template <typename T_out>
   void ComputeINT8(const paddle::framework::ExecutionContext& ctx) const {
@@ -665,8 +664,7 @@ class ConvMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
     if (need_s8_to_u8) {
       output->mutable_data<uint8_t>(ctx.GetPlace());
     }
-    output->set_layout(DataLayout::kMKLDNN);
-    output->set_format(GetMKLDNNFormat(*dst_memory_p));
+    output->set_mkldnn_mem_desc(dst_memory_p->get_desc());
   }
 };
 
@@ -821,8 +819,7 @@ class ConvMKLDNNGradOpKernel : public paddle::framework::OpKernel<T> {
                     {MKLDNN_ARG_DIFF_WEIGHTS, *diff_weights_memory_p}});
       astream.wait();
 
-      filter_grad->set_layout(DataLayout::kMKLDNN);
-      filter_grad->set_format(GetMKLDNNFormat(*diff_weights_memory_p));
+      filter_grad->set_mkldnn_mem_desc(diff_weights_memory_p->get_desc());
     }
     if (input_grad) {
       auto weights_memory_p = handler.AcquireWeightsMemoryFromDataPrimitive(
@@ -846,8 +843,7 @@ class ConvMKLDNNGradOpKernel : public paddle::framework::OpKernel<T> {
                                 {MKLDNN_ARG_DIFF_SRC, *diff_src_memory_p}});
       astream.wait();
 
-      input_grad->set_layout(DataLayout::kMKLDNN);
-      input_grad->set_format(GetMKLDNNFormat(*diff_src_memory_p));
+      input_grad->set_mkldnn_mem_desc(diff_src_memory_p->get_desc());
     }
   }
 };
