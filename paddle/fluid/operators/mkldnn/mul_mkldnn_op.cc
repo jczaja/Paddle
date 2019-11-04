@@ -145,7 +145,7 @@ class MulPrimitiveFactory {
     auto buffer_size = dst_desc.get_size();
 
     OT *output_data = output->mutable_data<OT>(ctx.GetPlace(), buffer_size);
-    output->set_format(paddle::platform::GetMKLDNNFormat(dst_desc));
+    output->set_mkldnn_mem_desc(dst_desc);
     return memory(dst_desc, engine_, to_void_cast<OT>(output_data));
   }
 
