@@ -62,10 +62,11 @@ inline void GetWeightsTz(std::vector<int64_t>& weights_tz,  // NOLINT
 
 inline mkldnn::memory::desc GetWeightsMemDesc(const Tensor& tensor, std::vector<int64_t>& weights_tz, int groups, bool is_conv3d)
 {
+  memory::data_type tensor_type = paddle::framework::ToMKLDNNDataType(tensor.type());
   if (is_conv3d) {
-    return (groups == 1) ? tensor.get_mkldnn_mem_desc() : mkldnn::memory::desc( weights_tz, tensor->type(), MKLDNNMemoryFormat::goidhw);
+    return (groups == 1) ? tensor.get_mkldnn_mem_desc() : mkldnn::memory::desc( weights_tz, tensor_type, MKLDNNMemoryFormat::goidhw);
   } else {
-    return (groups == 1) ? tensor.get_mkldnn_mem_desc() : mkldnn::memory::desc( weights_tz, tensor->type(), MKLDNNMemoryFormat::goihw);
+    return (groups == 1) ? tensor.get_mkldnn_mem_desc() : mkldnn::memory::desc( weights_tz, tensor_type, MKLDNNMemoryFormat::goihw);
   }
 }
 
