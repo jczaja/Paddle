@@ -216,12 +216,12 @@ class ConvMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
       }
     }
 
-    auto src_md = platform::mkldnn::memory::desc(
+    auto src_md = mkldnn::memory::desc(
         src_tz, platform::MKLDNNGetDataType<T>(), chosen_memory_format);
-    auto weights_md = platform::mkldnn::memory::desc(
+    auto weights_md = mkldnn::memory::desc(
         weights_tz, platform::MKLDNNGetDataType<T>(), weights_format);
     std::vector<int64_t> bias_tz;
-    auto dst_md = platform::mkldnn::memory::desc(
+    auto dst_md = mkldnn::memory::desc(
         dst_tz, platform::MKLDNNGetDataType<T>(), chosen_memory_format);
 
     platform::ConvMKLDNNHandler handler(dev_ctx, mkldnn_engine, key);
@@ -232,7 +232,7 @@ class ConvMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
                                  : mkldnn::prop_kind::forward_training;
     if (bias) {
       bias_tz = paddle::framework::vectorize(bias->dims());
-      auto bias_md = platform::mkldnn::memory::desc(
+      auto bias_md = mkldnn::memory::desc(
           bias_tz, platform::MKLDNNGetDataType<T>(), MKLDNNMemoryFormat::x);
       conv_pd = handler.AcquireConvolutionPrimitiveDescriptor(
           src_md, weights_md, bias_md, dst_md, strides, paddings, mkldnn_engine,
@@ -297,7 +297,7 @@ class ConvMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
     mkldnn::stream astream(mkldnn_engine);
     if (bias) {
       const T* bias_data = bias->data<T>();
-      auto user_bias_md = platform::mkldnn::memory::desc(
+      auto user_bias_md = mkldnn::memory::desc(
           {bias_tz}, platform::MKLDNNGetDataType<T>(), MKLDNNMemoryFormat::x);
       auto user_bias_memory_p =
           handler.AcquireBiasMemory(user_bias_md, to_void_cast<T>(bias_data));
@@ -483,8 +483,8 @@ class ConvMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
       }
 
       auto user_src_md =
-          platform::mkldnn::memory::desc({src_tz}, src_dt, input->format());
-      auto user_weights_md = platform::mkldnn::memory::desc(
+          mkldnn::memory::desc({src_tz}, src_dt, input->format());
+      auto user_weights_md = mkldnn::memory::desc(
           {weights_tz}, platform::MKLDNNGetDataType<K>(),
           ((g) == 1) ? MKLDNNMemoryFormat::oihw : MKLDNNMemoryFormat::goihw);
 
@@ -499,10 +499,10 @@ class ConvMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
       std::vector<int64_t> bias_tz;
 
       auto src_md =
-          platform::mkldnn::memory::desc(src_tz, src_dt, chosen_memory_format);
-      auto weights_md = platform::mkldnn::memory::desc(
+          mkldnn::memory::desc(src_tz, src_dt, chosen_memory_format);
+      auto weights_md = mkldnn::memory::desc(
           weights_tz, memory::data_type::s8, chosen_memory_format);
-      auto dst_md = platform::mkldnn::memory::desc(
+      auto dst_md = mkldnn::memory::desc(
           dst_tz, platform::MKLDNNGetDataType<T_out>(), chosen_memory_format);
 
       handler.reset(
@@ -513,7 +513,7 @@ class ConvMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
 
       if (bias) {
         bias_tz = paddle::framework::vectorize(bias->dims());
-        auto bias_md = platform::mkldnn::memory::desc(bias_tz, memory::data_type::s32,
+        auto bias_md = mkldnn::memory::desc(bias_tz, memory::data_type::s32,
                                                MKLDNNMemoryFormat::x);
         conv_pd = handler->AcquireConvolutionPrimitiveDescriptor(
             src_md, weights_md, bias_md, dst_md, strides, paddings,
@@ -553,7 +553,7 @@ class ConvMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
         if (residual_param->format() != handler->GetDstFormat()) {
           auto residual_data_tz =
               paddle::framework::vectorize(residual_param->dims());
-          auto user_residual_md = platform::mkldnn::memory::desc(
+          auto user_residual_md = mkldnn::memory::desc(
               residual_data_tz, residual_dt, residual_param->format());
           dst_memory_p = platform::SetDstMemory<T_out>(
               ctx, output, residual_param, user_residual_md, handler,
@@ -574,7 +574,7 @@ class ConvMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
       conv_p = handler->AcquireConvolution();
       if (bias) {
         const K* bias_data = bias->data<K>();
-        auto user_bias_md = platform::mkldnn::memory::desc(
+        auto user_bias_md = mkldnn::memory::desc(
             {bias_tz}, platform::MKLDNNGetDataType<K>(), MKLDNNMemoryFormat::x);
         auto user_bias_memory_p = handler->AcquireBiasMemory(
             user_bias_md, to_void_cast<K>(bias_data));
@@ -752,15 +752,15 @@ class ConvMKLDNNGradOpKernel : public paddle::framework::OpKernel<T> {
       }
     }
 
-    auto src_md = platform::mkldnn::memory::desc(
+    auto src_md = mkldnn::memory::desc(
         src_tz, platform::MKLDNNGetDataType<T>(), chosen_memory_format);
-    auto diff_src_md = platform::mkldnn::memory::desc(
+    auto diff_src_md = mkldnn::memory::desc(
         src_tz, platform::MKLDNNGetDataType<T>(), chosen_memory_format);
-    auto weights_md = platform::mkldnn::memory::desc(
+    auto weights_md = mkldnn::memory::desc(
         weights_tz, platform::MKLDNNGetDataType<T>(), weights_format);
-    auto diff_weights_md = platform::mkldnn::memory::desc(
+    auto diff_weights_md = mkldnn::memory::desc(
         weights_tz, platform::MKLDNNGetDataType<T>(), weights_format);
-    auto diff_dst_md = platform::mkldnn::memory::desc(
+    auto diff_dst_md = mkldnn::memory::desc(
         dst_tz, platform::MKLDNNGetDataType<T>(), chosen_memory_format);
     // Retrieve conv_pd from device context
     auto conv_pd =
