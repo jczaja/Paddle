@@ -41,7 +41,8 @@ class GaussianMKLDNNKernel : public paddle::framework::OpKernel<T> {
     }
 
     auto dims = paddle::framework::vectorize(tensor->dims());
-    auto md = mkldnn::memory::desc(dims, tensor->type(),mkldnn::memory::format_tag::oihw);
+    mkldnn::memory::data_type in_type = platform::MKLDNNGetDataType<T>();
+    auto md = mkldnn::memory::desc(dims, in_type, mkldnn::memory::format_tag::oihw);
     tensor->set_mkldnn_mem_desc(md);
   }
 };
