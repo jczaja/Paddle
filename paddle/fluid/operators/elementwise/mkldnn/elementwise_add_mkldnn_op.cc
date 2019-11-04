@@ -117,7 +117,7 @@ class EltwiseAddMKLDNNKernel : public framework::OpKernel<T> {
       } else {
         functor.RunMidWise(n, pre, post);
       }
-      auto z_md = mkldnn::memory::desc(src_x_tz, x->type(), format); 
+      auto z_md = mkldnn::memory::desc(src_x_tz, in_type, format); 
       z->set_mkldnn_mem_desc(z_md);
     } else {
       PADDLE_ENFORCE_EQ(x->layout(), DataLayout::kMKLDNN,
