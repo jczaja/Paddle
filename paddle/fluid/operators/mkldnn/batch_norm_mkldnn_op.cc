@@ -239,7 +239,7 @@ class BatchNormMKLDNNGradOpKernel : public paddle::framework::OpKernel<T> {
 
     BatchNormMKLDNNHandler<T> handler(
         src_tz, epsilon, mkldnn::normalization_flags::use_scale_shift,
-        diff_y->get_desc(), x->get_desc(), dev_ctx, ctx.GetPlace(),
+        diff_y->get_mkldnn_mem_desc(), x->get_mkldnn_mem_desc(), dev_ctx, ctx.GetPlace(),
         ctx.op().Input("SavedMean"));
 
     // MKLDNN requires a single piece of memory for scale and shift/bias data
