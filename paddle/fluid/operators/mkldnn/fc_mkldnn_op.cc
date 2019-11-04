@@ -210,7 +210,7 @@ class FCPrimitiveFactory {
     auto dst_desc = fc_prim_desc.dst_desc();
     auto buffer_size = dst_desc.get_size();
     T* output_data = output->mutable_data<T>(ctx.GetPlace(), buffer_size);
-    output->set_format(paddle::platform::GetMKLDNNFormat(dst_desc));
+    output->set_mkldnn_mem_desc(dst_desc);
     return memory(dst_desc, engine_, to_void_cast<T>(output_data));
   }
 
