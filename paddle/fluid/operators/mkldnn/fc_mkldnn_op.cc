@@ -80,7 +80,7 @@ class FCPrimitiveFactory {
     astream.wait();
   }
 
-  mkldnn::memory::desc& GetOutputMemoryDescriptor(void) {
+  mkldnn::memory::desc GetOutputMemoryDescriptor(void) {
     return (*output_).get_desc();
   }
 
