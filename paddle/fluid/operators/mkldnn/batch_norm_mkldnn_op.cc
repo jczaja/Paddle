@@ -151,7 +151,7 @@ class BatchNormMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
 
     BatchNormMKLDNNHandler<T> handler(
         src_tz, epsilon, flags, global_stats,
-        platform::MKLDNNFormatForSize(src_tz.size(), x->get_mkldnn_mem_desc()), dev_ctx,
+        x->get_mkldnn_mem_desc(), dev_ctx,
         ctx.GetPlace(), ctx.op().Output("SavedMean"));
 
     auto src_memory = handler.AcquireSrcMemory(x);
