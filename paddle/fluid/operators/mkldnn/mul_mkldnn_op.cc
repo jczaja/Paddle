@@ -59,7 +59,7 @@ class MulPrimitiveFactory {
 
     if (mul_) {
       UpdateDataPointers(ctx, output, &x_matrix);
-      Execute();
+      Execute(output);
       return *mul_;
     }
 
@@ -69,20 +69,17 @@ class MulPrimitiveFactory {
     auto dst_desc = CreateMemDescriptor<OT>(output, MKLDNNMemoryFormat::any);
 
     mul_ = CreateMulPrimitive(*x_input_, *y_input_, dst_desc, output, ctx);
-    Execute();
+    Execute(output);
     return *mul_;
   }
 
-  void Execute() {
+  void Execute(Tensor* output) {
     mkldnn::stream astream(engine_);
     (*mul_).execute(astream, {{MKLDNN_ARG_SRC, *x_input_},
                               {MKLDNN_ARG_WEIGHTS, *y_input_},
                               {MKLDNN_ARG_DST, *output_}});
     astream.wait();
-  }
-
-  mkldnn::memory::desc GetOutputMemoryDescriptor(void) {
-    return (*output_).get_desc();
+    output->set_mkldnn_mem_desc((*output_).get_desc());
   }
 
  protected:
@@ -149,7 +146,6 @@ class MulPrimitiveFactory {
     auto buffer_size = dst_desc.get_size();
 
     OT *output_data = output->mutable_data<OT>(ctx.GetPlace(), buffer_size);
-    output->set_mkldnn_mem_desc(dst_desc);
     return memory(dst_desc, engine_, to_void_cast<OT>(output_data));
   }
 
@@ -240,7 +236,7 @@ class QuantMulPrimitiveFactory : public MulPrimitiveFactory<XT, YT, OT> {
 
     if (this->mul_) {
       this->UpdateDataPointers(ctx, output, &x_matrix);
-      this->Execute();
+      this->Execute(output);
       return *(this->mul_);
     }
 
@@ -256,7 +252,7 @@ class QuantMulPrimitiveFactory : public MulPrimitiveFactory<XT, YT, OT> {
 
     this->mul_ = CreateMulPrimitive(*(this->x_input_), *(this->y_input_),
                                     dst_desc, output, ctx);
-    this->Execute();
+    this->Execute(output);
     return *(this->mul_);
   }
 
@@ -420,9 +416,7 @@ class MulMKLDNNKernel : public framework::OpKernel<XT> {
       memory::data_type out_type = paddle::framework::ToMKLDNNDataType(out->type());
       auto vec_dims = framework::vectorize(out->dims());
       out->set_mkldnn_mem_desc({vec_dims, out_type, platform::MKLDNNFormatForSize(out_dims.size(), MKLDNNMemoryFormat::nchw)});
-    } else {
-      out->set_mkldnn_mem_desc(prim_creator->GetOutputMemoryDescriptor());
-    }
+    } 
   }
 };
 
