@@ -81,6 +81,10 @@ class MulPrimitiveFactory {
     astream.wait();
   }
 
+  mkldnn::memory::desc GetOutputMemoryDescriptor(void) {
+    return (*output_).get_desc();
+  }
+
  protected:
   template <typename T>
   Tensor UpdateDataFormat(const Tensor *data, int num_col_dims,
@@ -417,7 +421,7 @@ class MulMKLDNNKernel : public framework::OpKernel<XT> {
       auto vec_dims = framework::vectorize(out->dims());
       out->set_mkldnn_mem_desc({vec_dims, out_type, platform::MKLDNNFormatForSize(out_dims.size(), MKLDNNMemoryFormat::nchw)});
     } else {
-      out->set_mkldnn_mem_desc(mul->dst_desc());
+      out->set_mkldnn_mem_desc(prim_creator->GetOutputMemoryDescriptor());
     }
   }
 };
