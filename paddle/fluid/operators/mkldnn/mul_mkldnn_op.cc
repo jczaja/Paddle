@@ -414,7 +414,8 @@ class MulMKLDNNKernel : public framework::OpKernel<XT> {
       out->Resize(out_dims);
       // perhaps it was flattened
       memory::data_type out_type = paddle::framework::ToMKLDNNDataType(out->type());
-      out->set_mkldnn_mem_desc({out_dims, out_type, platform::MKLDNNFormatForSize(out_dims.size(), MKLDNNMemoryFormat::nchw)});
+      auto vec_dims = framework::vectorize(tensor->dims());
+      out->set_mkldnn_mem_desc({vec_dims, out_type, platform::MKLDNNFormatForSize(out_dims.size(), MKLDNNMemoryFormat::nchw)});
     } else {
       out->set_mkldnn_mem_desc(mul->dst_desc());
     }
