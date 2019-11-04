@@ -207,7 +207,7 @@ class ConvMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
     auto chosen_memory_format =
         platform::data_format_to_memory_format(data_format);
 
-    weights_format = MKLDNNMemoryFormat::any;
+    auto weights_format = MKLDNNMemoryFormat::any;
     // Check the format for user's special output
     if (chosen_memory_format != MKLDNNMemoryFormat::any) {
       if (is_conv3d) {
