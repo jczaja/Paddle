@@ -14,6 +14,7 @@ limitations under the License. */
 
 #include <string>
 #include "paddle/fluid/operators/mean_op.h"
+#include "paddle/fluid/platform/mkldnn_helper.h"
 
 namespace paddle {
 namespace operators {
