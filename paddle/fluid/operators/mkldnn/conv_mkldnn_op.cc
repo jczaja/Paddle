@@ -397,8 +397,6 @@ class ConvMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
 
       PADDLE_ENFORCE_EQ(filter->layout(), DataLayout::kMKLDNN,
                         "Wrong layout set for Filter tensor");
-      PADDLE_ENFORCE_NE(filter->format(), MKLDNNMemoryFormat::undef,
-                        "Wrong format set for Filter tensor");
 
       PADDLE_ENFORCE_GE(
           filter->dims().size(), 4,
@@ -416,8 +414,6 @@ class ConvMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
       if (bias) {
         PADDLE_ENFORCE_EQ(bias->layout(), DataLayout::kMKLDNN,
                           "Wrong layout set for Bias tensor");
-        PADDLE_ENFORCE_NE(bias->format(), MKLDNNMemoryFormat::undef,
-                          "Wrong format set for Bias tensor");
 
         PADDLE_ENFORCE_EQ(bias->dims().size(), 1,
                           "Bias must only have 1 dimension, i.e. X");
