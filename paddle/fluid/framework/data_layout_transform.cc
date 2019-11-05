@@ -150,7 +150,7 @@ void innerTransDataLayoutFromMKLDNN(DataLayout in_layout, DataLayout out_layout,
   PADDLE_ENFORCE_NE(in_type, memory::data_type::undef,
                     "Input tensor type is not supported: %s", in.type());
 
-  auto out_mem_desc = mkldnn::memory::desc(out_tz, in_type, {});
+  auto out_mem_desc = mkldnn::memory::desc(out_tz, in_type, std::vector<int64_t>());
 
   // output tensor has the same dims as input. Reorder don't change dims
   out->Resize(in.dims());
