@@ -477,11 +477,7 @@ class ConvMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
                                   static_cast<double>(scale_weights_data[i])));
       }
 
-      auto user_src_md =
-          mkldnn::memory::desc({src_tz}, src_dt, input->format());
-      auto user_weights_md = mkldnn::memory::desc(
-          {weights_tz}, platform::MKLDNNGetDataType<K>(),
-          ((g) == 1) ? MKLDNNMemoryFormat::oihw : MKLDNNMemoryFormat::goihw);
+      auto user_weights_md = GetWeightsMemDesc(*filter, weights_tz, g, is_conv3d);
 
       /* create memory descriptor for convolution without specified format
       * ('any') which lets a primitive (convolution in this case) choose
@@ -523,7 +519,7 @@ class ConvMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
 
       // create mkldnn memory from input tensors (data/weights)
       user_src_memory_p =
-          handler->AcquireSrcMemory(user_src_md, to_void_cast<T>(input_data));
+          handler->AcquireSrcMemory(input->get_mkldnn_mem_desc(), to_void_cast<T>(input_data));
       auto user_weights_memory_p = handler->AcquireWeightsMemory(
           user_weights_md, to_void_cast<K>(filter_data));
 
@@ -545,13 +541,9 @@ class ConvMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
                           "same dimension sizes");
         auto residual_dt =
             paddle::framework::ToMKLDNNDataType(residual_param->type());
-        if (residual_param->format() != handler->GetDstFormat()) {
-          auto residual_data_tz =
-              paddle::framework::vectorize(residual_param->dims());
-          auto user_residual_md = mkldnn::memory::desc(
-              residual_data_tz, residual_dt, residual_param->format());
+        if (residual_param->get_mkldnn_mem_desc() != handler.GetDstDesc()) {
           dst_memory_p = platform::SetDstMemory<T_out>(
-              ctx, output, residual_param, user_residual_md, handler,
+              ctx, output, residual_param, residual_param->get_mkldnn_mem_desc(), handler,
               &pipeline);
         } else {
           output->ShareDataWith(*residual_param);
