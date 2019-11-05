@@ -779,7 +779,7 @@ class ConvMKLDNNTemplateHandler : public MKLDNNHandler {
 
   size_t GetDstMemorySize() const { return conv_pd_->dst_desc().get_size(); }
 
-  MKLDNNMemoryDescriptor& GetDstDesc() const {
+  MKLDNNMemoryDescriptor GetDstDesc() const {
     return conv_pd_->dst_desc();
   }
 

@@ -539,8 +539,6 @@ class ConvMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
         PADDLE_ENFORCE_EQ(output->dims(), residual_param->dims(),
                           "Output and elementwise parameter need to have the "
                           "same dimension sizes");
-        auto residual_dt =
-            paddle::framework::ToMKLDNNDataType(residual_param->type());
         if (residual_param->get_mkldnn_mem_desc() != handler->GetDstDesc()) {
           dst_memory_p = platform::SetDstMemory<T_out>(
               ctx, output, residual_param, residual_param->get_mkldnn_mem_desc(), handler,
