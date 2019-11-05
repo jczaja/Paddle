@@ -541,7 +541,7 @@ class ConvMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
                           "same dimension sizes");
         auto residual_dt =
             paddle::framework::ToMKLDNNDataType(residual_param->type());
-        if (residual_param->get_mkldnn_mem_desc() != handler.GetDstDesc()) {
+        if (residual_param->get_mkldnn_mem_desc() != handler->GetDstDesc()) {
           dst_memory_p = platform::SetDstMemory<T_out>(
               ctx, output, residual_param, residual_param->get_mkldnn_mem_desc(), handler,
               &pipeline);
