@@ -63,7 +63,12 @@ class TransposeMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
                          *transpose_dst_memory_p);
     astream.wait();
 
-    output->set_mkldnn_mem_desc(transpose_dst_memory_p->get_desc());
+    // Transpose did change logical dimensions of Tensor, but reorder does not.
+    // Reorder does change only physical layout eg. format , strides
+    // so we need to create new memory descriptor with changed logical layout
+    // so it match output shape
+    auto out_tz = paddle::framework::vectorize(output->dims());
+    output->set_mkldnn_mem_desc(mkldnn::memory::desc(out_tz, ToMKLDNNDataType(output->type()), std::vector<int64_t>()));
   }
 };
 
@@ -116,7 +121,12 @@ class TransposeMKLDNNGradOpKernel : public paddle::framework::OpKernel<T> {
                          *transpose_dst_memory_p);
     astream.wait();
 
-    x_grad->set_mkldnn_mem_desc(transpose_dst_memory_p->get_desc());
+    // Transpose did change logical dimensions of Tensor, but reorder does not.
+    // Reorder does change only physical layout eg. format , strides
+    // so we need to create new memory descriptor with changed logical layout
+    // so it match output shape
+    auto x_grad_tz = paddle::framework::vectorize(x_grad->dims());
+    x_grad->set_mkldnn_mem_desc(mkldnn::memory::desc(x_grad_tz, ToMKLDNNDataType(x_grad->type()), std::vector<int64_t>()));
   }
 };
 
