@@ -157,7 +157,7 @@ framework::OpKernelType BatchNormOp::GetExpectedKernelType(
 
 framework::OpKernelType BatchNormOp::GetKernelTypeForVar(
     const std::string &var_name, const Tensor &tensor,
-    const framework::OpKernelType &expected_kernel_type) const override {
+    const framework::OpKernelType &expected_kernel_type) const {
 #ifdef PADDLE_WITH_MKLDNN
   // Only input require reshaping, weights and
   // bias are having shape in NCHW order
