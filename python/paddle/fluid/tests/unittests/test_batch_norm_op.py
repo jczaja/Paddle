@@ -259,6 +259,12 @@ class TestBatchNormOpInference(unittest.TestCase):
 
         batch_norm_op.run(scope, place)
 
+        if data_layout == "NHWC" and self.use_mkldnn == True:
+          dims = y_tensor.shape()
+          c = dims.pop(1)
+          dims.append(c)
+          y_tensor._set_dims(dims)
+
         # check inference result
         self.__assert_close(
             y_tensor,
