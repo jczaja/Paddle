@@ -23,7 +23,7 @@ namespace inference {
 namespace analysis {
 
 void SetConfig(AnalysisConfig *cfg) {
-  cfg->SetModel(FLAGS_infer_model + "/model", FLAGS_infer_model + "/params");
+  cfg->SetModel(FLAGS_infer_model);
   cfg->DisableGpu();
   cfg->SwitchIrOptim();
   cfg->SwitchSpecifyInputNames();
@@ -31,7 +31,7 @@ void SetConfig(AnalysisConfig *cfg) {
 }
 
 void SetInput(std::vector<std::vector<PaddleTensor>> *inputs) {
-  SetFakeImageInput(inputs, FLAGS_infer_model);
+  SetFakeImageInput(inputs, FLAGS_infer_model, false);
 }
 
 void SetOptimConfig(AnalysisConfig *cfg) {
