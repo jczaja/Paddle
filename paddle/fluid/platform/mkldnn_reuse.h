@@ -929,16 +929,53 @@ class ConvMKLDNNTemplateHandler : public MKLDNNHandler {
     return this->AcquireMemory(md, ptr, "@user_bias_mem_p");
   }
 
+  //TODO(jczaja) : make a template
   std::shared_ptr<mkldnn::memory> AcquireWeightsMemoryFromPrimitive(
+      framework::Tensor* filter,
       const std::shared_ptr<mkldnn::memory> user_weights_memory_p,
       std::vector<mkldnn::primitive>& pipeline,  // NOLINT
       bool is_persistent = false, bool is_INT8 = false,
       std::vector<float> scale_data = {1.0f}, int mask = 0) {
     auto user_weights_pd = user_weights_memory_p->get_desc();
     auto weights_pd = conv_pd_->weights_desc();
-    return this->AcquireMemory(
+    auto target_memory_p = this->AcquireMemory(
         weights_pd, user_weights_pd, user_weights_memory_p, "@weights_mem_p",
         pipeline, is_persistent, is_INT8, scale_data, mask);
+    // In case for persistent mode we made in place reorder
+    // Tensor is updated with DNNL format and layout
+    // Original allocation with user data is overwritten
+    if (is_persistent) {
+      float* dst_ptr_f = nullptr;
+      int8_t* dst_ptr_i = nullptr;
+      if (is_INT8) {
+        dst_ptr_i = filter->mutable_data<int8_t>(dev_ctx_.GetPlace(), weights_pd.get_size());  
+      } else {
+        dst_ptr_f = filter->mutable_data<float>(dev_ctx_.GetPlace(), weights_pd.get_size());
+      }
+      auto src_ptr = target_memory_p->get_data_handle();
+      // Get Src pointer
+      // Get DST pointer
+      // Copy
+      if (((dst_ptr_f != src_ptr) && (is_INT8 == false)) || ((dst_ptr_i != src_ptr) && (is_INT8 == true))) {
+        VLOG(2) << "Overwritting original weights with DNNL weights";
+        if (is_INT8) {
+          std::memcpy(dst_ptr_i, src_ptr, weights_pd.get_size());
+        } else {
+          std::memcpy(dst_ptr_f, src_ptr, weights_pd.get_size());
+        }
+        auto local_key = key_ + "@user_weights_mem_p";
+        dev_ctx_.SetBlob(local_key, target_memory_p);
+        if (is_INT8) {
+          target_memory_p->set_data_handle(dst_ptr_i);
+        } else {
+          target_memory_p->set_data_handle(dst_ptr_f);
+        }
+      } else {
+        VLOG(2) << "Original weights match DNNL weights";
+      }
+    }
+  
+    return target_memory_p;
   }
 
   std::shared_ptr<mkldnn::memory> AcquireBiasMemoryFromPrimitive(

@@ -285,7 +285,7 @@ class ConvMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
     auto src_memory_p =
         handler.AcquireSrcMemoryFromPrimitive(user_src_memory_p, pipeline);
     auto weights_memory_p = handler.AcquireWeightsMemoryFromPrimitive(
-        user_weights_memory_p, pipeline, is_test);
+        const_cast<framework::Tensor*>(filter), user_weights_memory_p, pipeline, is_test);
 
     std::shared_ptr<mkldnn::memory> dst_memory_p, user_residual_memory_p;
 
@@ -591,7 +591,7 @@ class ConvMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
       int mask_reorder =
           is_multi_channel ? ((g != 1) ? (1 << 1) + (1 << 0) : 1 << 0) : 0;
       weights_memory_p = handler->AcquireWeightsMemoryFromPrimitive(
-          user_weights_memory_p, pipeline, is_test, true, scale_weights_data,
+          const_cast<framework::Tensor*>(filter), user_weights_memory_p, pipeline, is_test, true, scale_weights_data,
           mask_reorder);
 
       if (fuse_residual_conn) {
