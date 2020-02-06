@@ -944,7 +944,11 @@ class ConvMKLDNNTemplateHandler : public MKLDNNHandler {
     // In case for persistent mode we made in place reorder
     // Tensor is updated with DNNL format and layout
     // Original allocation with user data is overwritten
-    if (is_persistent) {
+    
+      const char* reduce_var = std::string(getenv("REDUCE"));
+      bool should_reduce = reduce_var == nullptr ? false : std::string(getenv("REDUCE")) == "yes" ? true : false;
+
+    if ((is_persistent) && (should_reduce) ) {
       float* dst_ptr_f = nullptr;
       int8_t* dst_ptr_i = nullptr;
       if (is_INT8) {
