@@ -945,8 +945,8 @@ class ConvMKLDNNTemplateHandler : public MKLDNNHandler {
     // Tensor is updated with DNNL format and layout
     // Original allocation with user data is overwritten
     
-      const char* reduce_var = std::string(getenv("REDUCE"));
-      bool should_reduce = reduce_var == nullptr ? false : std::string(getenv("REDUCE")) == "yes" ? true : false;
+      const char* reduce_var = getenv("REDUCE");
+      bool should_reduce = reduce_var == nullptr ? false : std::string(reduce_var) == "yes" ? true : false;
 
     if ((is_persistent) && (should_reduce) ) {
       float* dst_ptr_f = nullptr;
