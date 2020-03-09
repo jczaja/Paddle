@@ -195,6 +195,7 @@ void CpuPassStrategy::EnableMKLDNN() {
              "conv_relu_mkldnn_fuse_pass",        //
              "conv_leaky_relu_mkldnn_fuse_pass",  //
              "conv_relu6_mkldnn_fuse_pass",       //
+             "mkldnn_inplace_pass",               //
              // Disabled due to topology-dependent speed-up
              // "fc_mkldnn_pass"
          })) {

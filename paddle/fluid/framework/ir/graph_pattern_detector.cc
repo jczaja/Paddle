@@ -1834,6 +1834,33 @@ PDNode *patterns::MultipleQuantize::operator()() {
   return prev_out;
 }
 
+PDNode *patterns::MKLDNNInPlace::operator()() {
+
+  auto possible_inplace_op  = pattern->NewNode(mkldnn_outplace_op_repr())->assert_is_ops({"softmax", "batch_norm", "layer_norm"});
+
+
+  auto input = pattern->NewNode(mkldnn_outplace_in_repr())
+                                  ->assert_is_ops_input({"softmax","batch_norm","layer_norm"})
+                                  ->AsInput();
+  auto output = pattern->NewNode(mkldnn_outplace_out_repr())
+                                 ->assert_is_ops_output({"softmax","batch_norm","layer_norm"})
+                                 ->AsIntermediate();
+
+  auto next_op = pattern->NewNode(next_op_repr())->assert_is_op();
+
+
+  // Check if op is MKL-DNN enabled
+  possible_inplace_op->assert_op_attr("use_mkldnn", true);
+
+
+  possible_inplace_op->LinksTo({output});
+  possible_inplace_op->LinksFrom({input});
+  next_op->LinksFrom({output});
+
+  return possible_inplace_op;
+}
+
+
 // a -> transpose_op(1) -> transpose_out_a -> flatten_op(1) -> flatten_out_a
 // b -> transpose_op(2) -> transpose_out_b -> flatten_op(2) -> flatten_out_b
 // ...

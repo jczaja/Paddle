@@ -148,6 +148,7 @@ bool LoadInputData(std::vector<std::vector<paddle::PaddleTensor>> *inputs) {
 void SetConfig(AnalysisConfig *config) {
   config->SetModel(FLAGS_infer_model);
   config->DisableFCPadding();
+  config->EnableProfile();
 }
 
 void profile(bool use_mkldnn = false, bool use_ngraph = false) {
