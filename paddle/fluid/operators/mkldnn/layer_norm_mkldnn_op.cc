@@ -46,16 +46,6 @@ class LayerNormMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
     dnnl::normalization_flags flags{};
 
     if (with_scaleshift) {
-      //auto scale_tz = paddle::framework::vectorize(scale->dims());
-      //const unsigned int C = scale_tz[0];
-
-      // MKLDNN requires a single piece of memory for scale and shift/bias data
-      //scaleshift_data.reserve(2 * C);
-      //scaleshift_data.insert(scaleshift_data.begin(), scale->data<T>(),
-      //                       scale->data<T>() + C);
-      //scaleshift_data.insert(scaleshift_data.end(), bias->data<T>(),
-      //                       bias->data<T>() + C);
-
       flags |= dnnl::normalization_flags::use_scale_shift;
     }
 
@@ -64,7 +54,6 @@ class LayerNormMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
         ctx.OutputName("Y"));
 
     auto src_memory = handler.AcquireSrcMemory(x);
-    auto dst_memory = handler.AcquireDstMemory(y);
 
     auto layer_norm_p = handler.AcquireForwardPrimitive();
 
@@ -72,19 +61,25 @@ class LayerNormMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
     std::unordered_map<int, dnnl::memory> args;
 
     args.insert({DNNL_ARG_SRC, *src_memory});
-    args.insert({DNNL_ARG_DST, *dst_memory});
 
+    y->set_layout(DataLayout::kMKLDNN);
     if (!is_test) {
       auto* mean = ctx.Output<Tensor>("Mean");
       auto* var = ctx.Output<Tensor>("Variance");
       mean->mutable_data<T>(ctx.GetPlace());
       var->mutable_data<T>(ctx.GetPlace());
 
+      auto dst_memory = handler.AcquireDstMemory(y);
       auto mean_memory = handler.AcquireMeanMemory(mean);
       auto variance_memory = handler.AcquireVarianceMemory(var);
 
+      args.insert({DNNL_ARG_DST, *dst_memory});
       args.insert({DNNL_ARG_MEAN, *mean_memory});
       args.insert({DNNL_ARG_VARIANCE, *variance_memory});
+      y->set_format(platform::GetMKLDNNFormat(*dst_memory));
+    } else {
+      args.insert({DNNL_ARG_DST, *src_memory});
+      y->set_format(platform::GetMKLDNNFormat(*src_memory));
     }
 
     if (with_scaleshift) {
@@ -96,8 +91,6 @@ class LayerNormMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
     layer_norm_p->execute(astream, args);
     astream.wait();
 
-    y->set_layout(DataLayout::kMKLDNN);
-    y->set_format(platform::GetMKLDNNFormat(*dst_memory));
   }
 };
 
