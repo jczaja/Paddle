@@ -93,7 +93,10 @@ class SoftmaxMKLDNNKernel : public paddle::framework::OpKernel<T> {
                                     ctx.GetPlace(), ctx.OutputName("Out"));
 
     auto softmax_src_memory_p = handler.AcquireSrcMemory(input);
+
+    output->ShareDataWith((*input));
     auto softmax_dst_memory_p = handler.AcquireDstMemory(output);
+
     auto softmax_p = handler.AcquireForwardPrimitive();
 
     mkldnn::stream astream(dev_ctx.GetEngine());
