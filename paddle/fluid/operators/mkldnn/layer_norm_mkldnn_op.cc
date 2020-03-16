@@ -67,7 +67,6 @@ class LayerNormMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
     auto src_memory = handler.AcquireSrcMemory(x);
 
     y->ShareDataWith((*x));
-//    auto dst_memory = handler.AcquireDstMemory(y);
 
     auto layer_norm_p = handler.AcquireForwardPrimitive();
 
@@ -83,6 +82,7 @@ class LayerNormMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
       mean->mutable_data<T>(ctx.GetPlace());
       var->mutable_data<T>(ctx.GetPlace());
 
+      auto dst_memory = handler.AcquireDstMemory(y);
       auto mean_memory = handler.AcquireMeanMemory(mean);
       auto variance_memory = handler.AcquireVarianceMemory(var);
 
