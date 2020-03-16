@@ -486,6 +486,45 @@ class LayerNormMKLDNNHandler
     }
   }
 
+  std::shared_ptr<dnnl::memory> AcquireScaleShiftMemory(const framework::Tensor* scale,
+                                                      const framework::Tensor* bias,
+                                                     bool is_persistent = false) {
+    auto local_key = this->key_ + "@scaleshift_mem_p";
+    auto mem_p =
+        std::static_pointer_cast<mkldnn::memory>(this->dev_ctx_.GetBlob(local_key));
+    // TODO(jczaja,Adam): Make sure it works for multi-threading
+    if (mem_p == nullptr) {
+      auto scale_tz = paddle::framework::vectorize(scale->dims());
+      const unsigned int C = scale_tz[0];
+
+      // MKLDNN requires a single piece of memory for scale and shift/bias data
+      this->scaleshift_data_.reserve(2 * C);
+      this->scaleshift_data_.insert(this->scaleshift_data_.begin(), scale->data<T>(),
+                             scale->data<T>() + C);
+      this->scaleshift_data_.insert(this->scaleshift_data_.end(), bias->data<T>(),
+                             bias->data<T>() + C);
+
+      auto md = this->fwd_pd_->weights_desc();
+      mem_p = std::make_shared<mkldnn::memory>(md, this->engine_, &(this->scaleshift_data_[0]));
+      this->dev_ctx_.SetBlob(local_key, mem_p);
+    } else  if (!is_persistent) {
+      // scale and shift for inference are persistance they are not for training
+      auto scale_tz = paddle::framework::vectorize(scale->dims());
+      const unsigned int C = scale_tz[0];
+
+      // MKLDNN requires a single piece of memory for scale and shift/bias data
+      this->scaleshift_data_.reserve(2 * C);
+      this->scaleshift_data_.insert(this->scaleshift_data_.begin(), scale->data<T>(),
+                             scale->data<T>() + C);
+      this->scaleshift_data_.insert(this->scaleshift_data_.end(), bias->data<T>(),
+                             bias->data<T>() + C);
+      mem_p->set_data_handle(&(this->scaleshift_data_[0]));
+    }
+
+    return mem_p;
+  }
+
+
   std::shared_ptr<dnnl::memory> AcquireScaleShiftMemory(T* scaleshift_data) {
     return this->AcquireMemoryFromPrimitive(
         this->fwd_pd_->weights_desc(), scaleshift_data, "@scaleshift_mem_p");
@@ -505,6 +544,10 @@ class LayerNormMKLDNNHandler
     return this->AcquireMemoryFromPrimitive(this->fwd_pd_->variance_desc(),
                                             variance_data, "@variance_mem_p");
   }
+
+  private:
+    std::vector<T> scaleshift_data_;
+
 };
 
 template <typename T>
