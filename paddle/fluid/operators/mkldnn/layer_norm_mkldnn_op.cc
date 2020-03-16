@@ -65,7 +65,9 @@ class LayerNormMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
         ctx.OutputName("Y"));
 
     auto src_memory = handler.AcquireSrcMemory(x);
-    auto dst_memory = handler.AcquireDstMemory(y);
+
+    y->ShareDataWith((*x));
+//    auto dst_memory = handler.AcquireDstMemory(y);
 
     auto layer_norm_p = handler.AcquireForwardPrimitive();
 
@@ -73,8 +75,8 @@ class LayerNormMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
     std::unordered_map<int, dnnl::memory> args;
 
     args.insert({DNNL_ARG_SRC, *src_memory});
-    args.insert({DNNL_ARG_DST, *dst_memory});
 
+    y->set_layout(DataLayout::kMKLDNN);
     if (!is_test) {
       auto* mean = ctx.Output<Tensor>("Mean");
       auto* var = ctx.Output<Tensor>("Variance");
@@ -84,9 +86,15 @@ class LayerNormMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
       auto mean_memory = handler.AcquireMeanMemory(mean);
       auto variance_memory = handler.AcquireVarianceMemory(var);
 
+      args.insert({DNNL_ARG_DST, *dst_memory});
       args.insert({DNNL_ARG_MEAN, *mean_memory});
       args.insert({DNNL_ARG_VARIANCE, *variance_memory});
+      y->set_format(platform::GetMKLDNNFormat(*dst_memory));
+    } else {
+      args.insert({DNNL_ARG_DST, *src_memory});
+      y->set_format(platform::GetMKLDNNFormat(*src_memory));
     }
+
 
     if (with_scaleshift) {
       auto scaleshift_memory =
@@ -97,8 +105,6 @@ class LayerNormMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
     layer_norm_p->execute(astream, args);
     astream.wait();
 
-    y->set_layout(DataLayout::kMKLDNN);
-    y->set_format(platform::GetMKLDNNFormat(*dst_memory));
   }
 };
 
