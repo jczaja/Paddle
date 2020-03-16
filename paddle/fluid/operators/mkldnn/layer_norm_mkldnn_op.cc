@@ -54,6 +54,7 @@ class LayerNormMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
         ctx.OutputName("Y"));
 
     auto src_memory = handler.AcquireSrcMemory(x);
+    y->ShareDataWith((*x));
 
     auto layer_norm_p = handler.AcquireForwardPrimitive();
 
