@@ -18,6 +18,7 @@
 #include <string>
 #include <vector>
 #include "paddle/fluid/framework/eigen.h"
+#include "paddle/fluid/framework/op_info.h"
 #include "paddle/fluid/framework/lod_tensor.h"
 #include "paddle/fluid/platform/enforce.h"
 
@@ -51,26 +52,22 @@ void MKLDNNInPlacePass::ApplyImpl(ir::Graph* graph) const {
       return;
     }
 
+    auto &infer_inplace = OpInfoMap::Instance().Get(mkldnn_outplace_op->Op()->Type()).infer_inplace_;
+    if (!infer_inplace) {
+      VLOG(4) << "do not perform mkl-dnn inplace: missing InplaceInferer";
+      return;
+    }
+
     // Set Input node as output e.g. In-place computation
-    if (mkldnn_outplace_op->Op()->Type() == "softmax") {
-      mkldnn_outplace_op->Op()->SetOutput("Out",
-                 std::vector<std::string>({mkldnn_outplace_in->Name()}));
-    } else {
-      mkldnn_outplace_op->Op()->SetOutput("Y",
-                 std::vector<std::string>({mkldnn_outplace_in->Name()}));
+    if (mkldnn_outplace_op->Op()->Type() != "softmax") {
+      VLOG(4) << "Curently works for softmax only. TODO(jczaja): support other ops";
+      return;
     }
 
     auto next_op_inputs =  next_op->Op()->Inputs();
     
-    // Make it working for Conv and other
-    if (next_op_inputs.find("X") != next_op_inputs.end()) {
-      next_op->Op()->SetInput("X", {mkldnn_outplace_in->Name()})  ;
-    }
-
     
-    IR_NODE_LINK_TO(mkldnn_outplace_in,next_op);
 
-    GraphSafeRemoveNodes(graph, {mkldnn_outplace_out});
     found_inplace_count++;
     VLOG(4) << "MKL-DNN InPlace applied!"; 
   };
