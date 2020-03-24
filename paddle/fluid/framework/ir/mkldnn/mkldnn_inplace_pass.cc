@@ -79,7 +79,7 @@ void MKLDNNInPlacePass::ApplyImpl(ir::Graph* graph) const {
     std::cout << "Input name:" << mkldnn_outplace_in->Name() << std::endl;   // g
     std::cout << "Output name:" << mkldnn_outplace_out->Name() << std::endl; // h
 
-    auto* softmax_input = scope->FindVar(mkldnn_outplace_op->Op()->Input("X"));
+    auto* softmax_input = scope.FindVar(mkldnn_outplace_op->Op()->Input("X"));
     
 
 
