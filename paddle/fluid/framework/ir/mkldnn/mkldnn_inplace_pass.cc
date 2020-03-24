@@ -26,7 +26,6 @@ namespace paddle {
 namespace framework {
 namespace ir {
 
-static const char kParamScopeAttr[] = "__param_scope__";
 
 void MKLDNNInPlacePass::ApplyImpl(ir::Graph* graph) const {
   PADDLE_ENFORCE_NOT_NULL(graph,
@@ -36,6 +35,7 @@ void MKLDNNInPlacePass::ApplyImpl(ir::Graph* graph) const {
   patterns::MKLDNNInPlace mkldnn_inplace{gpd.mutable_pattern(),
                                                        "mkldnn_inplace"};
 
+  const char kParamScopeAttr[] = "__param_scope__";
   PADDLE_ENFORCE(graph->Has(kParamScopeAttr));
   auto scope = graph->Get<framework::Scope>(kParamScopeAttr);
 
