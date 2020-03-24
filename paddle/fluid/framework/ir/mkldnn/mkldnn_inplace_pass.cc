@@ -38,7 +38,7 @@ void MKLDNNInPlacePass::ApplyImpl(ir::Graph* graph) const {
   const char kParamScopeAttr[] = "__param_scope__";
   PADDLE_ENFORCE(graph->Has(kParamScopeAttr));
   auto& scope = graph->Get<framework::Scope>(kParamScopeAttr);
-  PADDLE_ENFORCE(scope);
+//  PADDLE_ENFORCE(scope);
 
   mkldnn_inplace();
 
