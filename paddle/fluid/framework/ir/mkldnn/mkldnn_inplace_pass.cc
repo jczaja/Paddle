@@ -76,8 +76,8 @@ void MKLDNNInPlacePass::ApplyImpl(ir::Graph* graph) const {
       return;
     }
 
-    std::cout << "Input name:" mkldnn_outplace_in->Name() << std::endl;
-    std::cout << "Output name:" mkldnn_outplace_out->Name() << std::endl;
+    std::cout << "Input name:" << mkldnn_outplace_in->Name() << std::endl;
+    std::cout << "Output name:" << mkldnn_outplace_out->Name() << std::endl;
 
     auto next_op_inputs =  next_op->Op()->Inputs();
     
