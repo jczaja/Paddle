@@ -35,12 +35,6 @@ void MKLDNNInPlacePass::ApplyImpl(ir::Graph* graph) const {
   GraphPatternDetector gpd;
   patterns::MKLDNNInPlace mkldnn_inplace{gpd.mutable_pattern(),
                                                        "mkldnn_inplace"};
-
-  const char kParamScopeAttr[] = "__param_scope__";
-  PADDLE_ENFORCE(graph->Has(kParamScopeAttr));
-  auto& scope = graph->Get<framework::Scope>(kParamScopeAttr);
-//  PADDLE_ENFORCE(scope);
-
   mkldnn_inplace();
 
   
@@ -73,10 +67,6 @@ void MKLDNNInPlacePass::ApplyImpl(ir::Graph* graph) const {
       VLOG(4) << "Curently works for softmax only. TODO(jczaja): support other ops";
       return;
     }
-
-    std::cout << "Input name:" << mkldnn_outplace_in->Name() << std::endl;   // g
-    std::cout << "Output name:" << mkldnn_outplace_out->Name() << std::endl; // h
-
 
 //    auto &in_var_handle = mkldnn_outplace_in->Wrapper<details::VarHandleBase>();
 //    auto &out_var_handle = mkldnn_outplace_out->Wrapper<details::VarHandleBase>();

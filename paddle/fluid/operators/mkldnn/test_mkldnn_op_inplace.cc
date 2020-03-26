@@ -77,6 +77,9 @@ bool TestMain(const platform::Place &place, const framework::DDim &dims) {
   auto &out_tensor = scope.FindVar("x")->Get<framework::LoDTensor>();
   PADDLE_ENFORCE_EQ(&out_tensor, x);
 
+
+  VLOG(3) << DebugString(graph);
+
   // compare results
   auto *ref_ptr = ref_tensor.data<T>();
   auto *out_ptr = out_tensor.data<T>();
