@@ -16,6 +16,7 @@
 
 #include <gtest/gtest.h>
 #include <boost/logic/tribool.hpp>
+#include "paddle/fluid/framework/ir/pass_tester_helper.h"
 
 namespace paddle {
 namespace framework {
@@ -109,6 +110,8 @@ class MKLDNNInplacePassTest {
     output_names["batch_norm"] = "Y";
     input_names["layer_norm"] = "X";
     output_names["layer_norm"] = "Y";
+
+    VLOG(3) << DebugString(graph);
 
     for (auto* node : graph->Nodes()) {
       if (node->IsOp()) {

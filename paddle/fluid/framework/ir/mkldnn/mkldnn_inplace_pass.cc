@@ -13,7 +13,6 @@
 // limitations under the License.
 
 #include "paddle/fluid/framework/ir/mkldnn/mkldnn_inplace_pass.h"
-#include <gtest/gtest.h>
 #include <algorithm>
 #include <memory>
 #include <string>
@@ -85,7 +84,6 @@ void MKLDNNInPlacePass::ApplyImpl(ir::Graph* graph) const {
   };
 
   gpd(graph, handler);
-  VLOG(3) << DebugString(graph);
 }
 
 }  // namespace ir
