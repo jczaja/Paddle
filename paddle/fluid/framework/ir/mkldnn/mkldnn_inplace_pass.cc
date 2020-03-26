@@ -66,9 +66,6 @@ void MKLDNNInPlacePass::ApplyImpl(ir::Graph* graph) const {
 //      VLOG(4) << "do not perform mkl-dnn inplace: missing InplaceInferer";
 //      return;
 //    }
-    
-      
-  
 
     // Set Input node as output e.g. In-place computation
     if (mkldnn_outplace_op->Op()->Type() != "softmax") {
@@ -79,8 +76,9 @@ void MKLDNNInPlacePass::ApplyImpl(ir::Graph* graph) const {
     std::cout << "Input name:" << mkldnn_outplace_in->Name() << std::endl;   // g
     std::cout << "Output name:" << mkldnn_outplace_out->Name() << std::endl; // h
 
-    auto* softmax_input = scope.FindVar(mkldnn_outplace_op->Op()->Input("X")[0]);
-    
+
+    auto &in_var_handle = in_node->Wrapper<details::VarHandleBase>();
+    auto &out_var_handle = out_node->Wrapper<details::VarHandleBase>();
 
 
     auto next_op_inputs =  next_op->Op()->Inputs();
@@ -92,9 +90,6 @@ void MKLDNNInPlacePass::ApplyImpl(ir::Graph* graph) const {
   };
 
   gpd(graph, handler);
-
-  //TODO(jczaja): Enable counting
-  //AddStatis(found_inplace_count);
 }
 
 }  // namespace ir

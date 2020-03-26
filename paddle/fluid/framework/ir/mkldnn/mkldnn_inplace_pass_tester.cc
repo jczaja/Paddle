@@ -128,11 +128,6 @@ class MKLDNNInplacePassTest {
     EXPECT_EQ(use_mkldnn_true_count, expected_use_mkldnn_true_count);
   }
 
-  //void PlacementNameTest() {
-    //auto pass = PassRegistry::Instance().Get("mkldnn_placement_pass");
-    //EXPECT_EQ(static_cast<PlacementPassBase*>(pass.get())->GetPlacementName(),
-              //"MKLDNN");
-  //}
 };
 
 TEST(MKLDNNInplacePass, inplace_softmax) {
