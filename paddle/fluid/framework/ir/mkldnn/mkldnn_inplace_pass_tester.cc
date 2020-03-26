@@ -79,24 +79,12 @@ class MKLDNNInplacePassTest {
     return prog;
   }
 
-  Scope* CreateParamScope() {
-    auto param_scope = new Scope();
-//    AddVarToScope(param_scope, "bias_1", {3});
-//    AddVarToScope(param_scope, "scale", {3});
-//    AddVarToScope(param_scope, "mean", {3});
-//    AddVarToScope(param_scope, "variance", {3});
-//    AddVarToScope(param_scope, "filters", {3, 3, 2, 2});
-    return param_scope;
-  }
-
-
  public:
   void MainTest(const std::string& mkldnn_enabled_op,
                 unsigned expected_use_mkldnn_true_count) {
     auto prog = BuildProgramDesc(mkldnn_enabled_op);
 
     std::unique_ptr<ir::Graph> graph(new ir::Graph(prog));
-    graph->Set("__param_scope__", CreateParamScope());
     auto pass = PassRegistry::Instance().Get("mkldnn_inplace_pass");
 
     graph.reset(pass->Apply(graph.release()));
