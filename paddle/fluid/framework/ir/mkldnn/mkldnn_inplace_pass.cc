@@ -21,6 +21,7 @@
 #include "paddle/fluid/framework/op_info.h"
 #include "paddle/fluid/framework/lod_tensor.h"
 #include "paddle/fluid/platform/enforce.h"
+#include "paddle/fluid/framework/details/var_handle.h"
 
 namespace paddle {
 namespace framework {
