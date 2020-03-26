@@ -84,6 +84,7 @@ void MKLDNNInPlacePass::ApplyImpl(ir::Graph* graph) const {
   };
 
   gpd(graph, handler);
+  VLOG(3) << DebugString(graph);
 }
 
 }  // namespace ir

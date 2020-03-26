@@ -110,8 +110,6 @@ class MKLDNNInplacePassTest {
     input_names["layer_norm"] = "X";
     output_names["layer_norm"] = "Y";
 
-    VLOG(3) << DebugString(graph);
-
     for (auto* node : graph->Nodes()) {
       if (node->IsOp()) {
         auto* op = node->Op();
