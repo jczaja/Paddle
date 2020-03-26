@@ -75,9 +75,10 @@ void MKLDNNInPlacePass::ApplyImpl(ir::Graph* graph) const {
     mkldnn_outplace_op->Op()->SetOutput("Out",
               std::vector<std::string>({mkldnn_outplace_out->Name()}));
 
-    auto next_op_inputs =  next_op->Op()->Inputs();
-    
-    
+    //TODO(jczaja): do properly
+    next_op->Op()->SetInput("X", std::vector<std::string>({mkldnn_outplace_out->Name()}));
+
+        
 
     found_inplace_count++;
     VLOG(4) << "MKL-DNN InPlace applied!"; 
