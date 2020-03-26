@@ -81,7 +81,7 @@ void MKLDNNInPlacePass::ApplyImpl(ir::Graph* graph) const {
 //    auto &in_var_handle = mkldnn_outplace_in->Wrapper<details::VarHandleBase>();
 //    auto &out_var_handle = mkldnn_outplace_out->Wrapper<details::VarHandleBase>();
 
-    mkldnn_outplace_op->RenameVar(mkldnn_outplace_in->Name());
+    mkldnn_outplace_out->RenameVar(mkldnn_outplace_in->Name());
 
     auto next_op_inputs =  next_op->Op()->Inputs();
     
