@@ -21,7 +21,6 @@
 #include "paddle/fluid/framework/op_info.h"
 #include "paddle/fluid/framework/lod_tensor.h"
 #include "paddle/fluid/platform/enforce.h"
-#include "paddle/fluid/framework/details/var_handle.h"
 
 namespace paddle {
 namespace framework {
@@ -54,6 +53,7 @@ void MKLDNNInPlacePass::ApplyImpl(ir::Graph* graph) const {
       return;
     }
 
+    auto& opmap = PD_GetOpInfoMap();
 
     // TODO(jczaja): Check inferer
 //    auto &infer_inplace = OpInfoMap::Instance().Get(mkldnn_outplace_op->Op()->Type()).infer_inplace_;
