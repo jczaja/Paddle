@@ -79,7 +79,7 @@ void MKLDNNInPlacePass::ApplyImpl(ir::Graph* graph) const {
           auto input_names = op->InputNames();
           auto in_place_input = mkldnn_outplace_in->Name();
           if (std::find(input_names.begin(), input_names.end(),
-                               in_place_input) != op_types_list.end()) {
+                               in_place_input) != input_names.end()) {
            VLOG(4) << "MKL-DNN in-place pass: in-place var cannot be an input to more than one operator";
            return;
           }
