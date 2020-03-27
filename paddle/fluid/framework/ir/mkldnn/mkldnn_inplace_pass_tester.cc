@@ -19,6 +19,9 @@
 #include "paddle/fluid/framework/ir/pass_tester_helper.h"
 #include "paddle/fluid/framework/op_registry.h"
 
+USE_OP(softmax);
+USE_OP_DEVICE_KERNEL(softmax, MKLDNN);
+
 namespace paddle {
 namespace framework {
 namespace ir {
@@ -93,9 +96,9 @@ class MKLDNNInplacePassTest {
     auto pass = PassRegistry::Instance().Get("mkldnn_inplace_pass");
 
     // TODO(jczaja): less hardcoded
-    auto op_ref = framework::OpRegistry::CreateOp("softmax",
-                    {{"X", {"g"}}},
-                    {{"Out", {"h"}}}, {{"use_mkldnn", {true}}});
+//    auto op_ref = framework::OpRegistry::CreateOp("softmax",
+//                    {{"X", {"g"}}},
+//                    {{"Out", {"h"}}}, {{"use_mkldnn", {true}}});
 
 
     graph.reset(pass->Apply(graph.release()));
