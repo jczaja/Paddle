@@ -88,7 +88,7 @@ void MKLDNNInPlacePass::ApplyImpl(ir::Graph* graph) const {
       }
     }
 
-    auto in_to_outs = infer_inplace_(false); // strictly no CUDA for MKL-DNN
+    auto in_to_outs = infer_inplace(false); // strictly no CUDA for MKL-DNN
     auto original_name = mkldnn_outplace_out->Name();
     mkldnn_outplace_out->RenameVar(mkldnn_outplace_in->Name());
      
