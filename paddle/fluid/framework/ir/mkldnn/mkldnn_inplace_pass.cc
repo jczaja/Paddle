@@ -53,14 +53,12 @@ void MKLDNNInPlacePass::ApplyImpl(ir::Graph* graph) const {
       return;
     }
 
-    auto& opmap = OpInfoMap::Instance();
-
     // TODO(jczaja): Check inferer
-//    auto &infer_inplace = OpInfoMap::Instance().Get(mkldnn_outplace_op->Op()->Type()).infer_inplace_;
-//    if (!infer_inplace) {
-//      VLOG(4) << "do not perform mkl-dnn inplace: missing InplaceInferer";
-//      return;
-//    }
+    auto &infer_inplace = OpInfoMap::Instance().Get(mkldnn_outplace_op->Op()->Type()).infer_inplace_;
+    if (!infer_inplace) {
+      VLOG(3) << "do not perform mkl-dnn inplace: missing InplaceInferer";
+      return;
+    }
 
     // TODO(jczaja): Enable more ops
     if (mkldnn_outplace_op->Op()->Type() != "softmax") {

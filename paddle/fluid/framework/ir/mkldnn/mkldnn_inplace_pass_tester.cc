@@ -95,12 +95,6 @@ class MKLDNNInplacePassTest {
     std::unique_ptr<ir::Graph> graph(new ir::Graph(prog));
     auto pass = PassRegistry::Instance().Get("mkldnn_inplace_pass");
 
-    // TODO(jczaja): less hardcoded
-//    auto op_ref = framework::OpRegistry::CreateOp("softmax",
-//                    {{"X", {"g"}}},
-//                    {{"Out", {"h"}}}, {{"use_mkldnn", {true}}});
-
-
     graph.reset(pass->Apply(graph.release()));
 
     unsigned use_mkldnn_true_count = 0;
