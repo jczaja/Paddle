@@ -74,10 +74,10 @@ void MKLDNNInPlacePass::ApplyImpl(ir::Graph* graph) const {
     for (const Node* n : graph->Nodes()) {
       if (n->IsOp()) {
         auto* op = n->Op();
-        in_place_input = mkldnn_outplace_in->Name();
         // Avoid searchin in op that is to be inplace
         if ((n->id() != mkldnn_outplace_op->id()) ) {
           auto input_names = op->Op()->InputNames();
+          auto in_place_input = mkldnn_outplace_in->Name();
           if (std::find(input_names.begin(), input_names.end(),
                                in_place_input) != op_types_list.end()) {
            VLOG(4) << "MKL-DNN in-place pass: in-place var cannot be an\ 
