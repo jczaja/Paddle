@@ -53,7 +53,7 @@ void MKLDNNInPlacePass::ApplyImpl(ir::Graph* graph) const {
       return;
     }
 
-    auto& opmap = PD_GetOpInfoMap();
+    auto& opmap = OpInfoMap::Instance();
 
     // TODO(jczaja): Check inferer
 //    auto &infer_inplace = OpInfoMap::Instance().Get(mkldnn_outplace_op->Op()->Type()).infer_inplace_;
