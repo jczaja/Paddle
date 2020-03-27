@@ -99,15 +99,7 @@ void MKLDNNInPlacePass::ApplyImpl(ir::Graph* graph) const {
 
     // Iterate through inputs of next op's node
     // and change relevant input's var name into renamed one
-    auto* op = next_op->Op(); 
-    for(auto& it : op->Inputs()) {
-      for(auto& var_name : it.second) {
-        if (var_name == original_name) {
-          op->SetInput(it.first, std::vector<std::string>({mkldnn_outplace_out->Name()}));
-        }
-      }
-    }
-
+    next_op->Op()->RenameInput(original_name, mkldnn_outplace_out->Name()); 
     found_inplace_count++;
     VLOG(3) << "MKL-DNN InPlace applied!"; 
   };
