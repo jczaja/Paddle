@@ -17,6 +17,7 @@
 #include <gtest/gtest.h>
 #include <boost/logic/tribool.hpp>
 #include "paddle/fluid/framework/ir/pass_tester_helper.h"
+#include "paddle/fluid/framework/op_registry.h"
 
 namespace paddle {
 namespace framework {
