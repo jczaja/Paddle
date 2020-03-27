@@ -81,7 +81,7 @@ void MKLDNNInPlacePass::ApplyImpl(ir::Graph* graph) const {
           for(auto& it : inputs) {
             for(auto& var_name : it.second) {
               if (var_name == in_place_input) {
-               VLOG(4) << "MKL-DNN in-place pass: in-place var cannot be an input to more than one operator";
+               VLOG(3) << "MKL-DNN in-place pass: in-place var cannot be an input to more than one operator";
                return;
               }
             }
@@ -90,19 +90,26 @@ void MKLDNNInPlacePass::ApplyImpl(ir::Graph* graph) const {
       }
     }
 
-    //TODO(jczaja): iterate over outputs searching for output with origianal name
-    // then rename it
+    auto original_name = mkldnn_outplace_out->Name();
     mkldnn_outplace_out->RenameVar(mkldnn_outplace_in->Name());
+     
+    // TODO(jczaja): Get Output name from inplaceinferer
     mkldnn_outplace_op->Op()->SetOutput("Out",
               std::vector<std::string>({mkldnn_outplace_out->Name()}));
 
-    //TODO(jczaja): do properly
-    next_op->Op()->SetInput("X", std::vector<std::string>({mkldnn_outplace_out->Name()}));
-
-        
+    // Iterate through inputs of next op's node
+    // and change relevant input's var name into renamed one
+    auto* op = next_op->Op(); 
+    for(auto& it : op->Inputs()) {
+      for(auto& var_name : it.second) {
+        if (var_name == original_name) {
+          op->SetInput(it.first, std::vector<std::string>({mkldnn_outplace_out->Name()}));
+        }
+      }
+    }
 
     found_inplace_count++;
-    VLOG(4) << "MKL-DNN InPlace applied!"; 
+    VLOG(3) << "MKL-DNN InPlace applied!"; 
   };
 
   gpd(graph, handler);
