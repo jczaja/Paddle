@@ -95,7 +95,7 @@ void MKLDNNInPlacePass::ApplyImpl(ir::Graph* graph) const {
     // Get mapping of input to output
     auto in_to_outs = infer_inplace(false); // strictly no CUDA for MKL-DNN
     //TODO(jczaja): Support more complex situations    
-    auto out_name = in_to_outs.begin().second;
+    auto out_name = in_to_outs.begin()->second;
     mkldnn_outplace_op->Op()->SetOutput(out_name,
               std::vector<std::string>({mkldnn_outplace_out->Name()}));
     next_op->Op()->RenameInput(original_name, mkldnn_outplace_out->Name()); 
