@@ -54,11 +54,11 @@ class MKLDNNInplacePassTest {
     op->SetOutput("Out", {outputs[0]});
   }
 
-  ProgramDesc BuildProgramDesc(const std::string& mkldnn_enabled_op) {
+  ProgramDesc BuildProgramDesc(const std::string& mkldnn_enabled_op, bool branched) {
     ProgramDesc prog;
 
     for (auto& v :
-         std::vector<std::string>({"a", "weights", "bias", "f", "g", "h", "i", "j"})) {
+         std::vector<std::string>({"a", "weights", "bias", "f", "g", "h", "i", "j","k"})) {
       auto* var = prog.MutableBlock(0)->Var(v);
       var->SetType(proto::VarType::SELECTED_ROWS);
       if (v == "weights" || v == "bias") {
@@ -75,14 +75,18 @@ class MKLDNNInplacePassTest {
           std::vector<std::string>({"h"}), mkldnn_enabled_op.compare("softmax") == 0);
     SetOp(&prog, "elementwise_add", "elementwise_add1", std::vector<std::string>({"h","i"}),
           std::vector<std::string>({"j"}), mkldnn_enabled_op.compare("elementwise_add") == 0);
+    if (branched == true) {
+      SetOp(&prog, "softmax", "softmax2", std::vector<std::string>({"g"}),
+            std::vector<std::string>({"k"}), mkldnn_enabled_op.compare("softmax") == 0);
+    }
 
     return prog;
   }
 
  public:
-  void MainTest(const std::string& mkldnn_enabled_op,
+  void MainTest(const std::string& mkldnn_enabled_op, bool branched,
                 unsigned expected_use_mkldnn_true_count) {
-    auto prog = BuildProgramDesc(mkldnn_enabled_op);
+    auto prog = BuildProgramDesc(mkldnn_enabled_op, branched);
 
     std::unique_ptr<ir::Graph> graph(new ir::Graph(prog));
     auto pass = PassRegistry::Instance().Get("mkldnn_inplace_pass");
@@ -122,9 +126,13 @@ class MKLDNNInplacePassTest {
 
 TEST(MKLDNNInplacePass, inplace_softmax) {
   // softmax to be mkl-dnn enabled and made in-place
-  MKLDNNInplacePassTest().MainTest("softmax", 1);
+  MKLDNNInplacePassTest().MainTest("softmax",false, 1);
 }
 
+TEST(MKLDNNInplacePass, inplace_softmax_branched) {
+  // softmax to be mkl-dnn enabled and made in-place
+  MKLDNNInplacePassTest().MainTest("softmax",true, 0);
+}
 
 }  // namespace ir
 }  // namespace framework
