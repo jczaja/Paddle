@@ -62,15 +62,34 @@ void MKLDNNInPlacePass::ApplyImpl(ir::Graph* graph) const {
 //      return;
 //    }
 
-    // Set Input node as output e.g. In-place computation
+    // TODO(jczaja): Enable more ops
     if (mkldnn_outplace_op->Op()->Type() != "softmax") {
       VLOG(4) << "Curently works for softmax only. TODO(jczaja): support other ops";
       return;
     }
 
-//    auto &in_var_handle = mkldnn_outplace_in->Wrapper<details::VarHandleBase>();
-//    auto &out_var_handle = mkldnn_outplace_out->Wrapper<details::VarHandleBase>();
+   // Iterate over all nodes  that are ops
+   // and check if in-place to be var is part of inputs
+   // if positive then do not perform inplace
+    for (const Node* n : graph->Nodes()) {
+      if (n->IsOp()) {
+        auto* op = n->Op();
+        in_place_input = mkldnn_outplace_in->Name();
+        // Avoid searchin in op that is to be inplace
+        if ((n->id() != mkldnn_outplace_op->id()) ) {
+          auto input_names = op->Op()->InputNames();
+          if (std::find(input_names.begin(), input_names.end(),
+                               in_place_input) != op_types_list.end()) {
+           VLOG(4) << "MKL-DNN in-place pass: in-place var cannot be an\ 
+                 input to more than one operator";
+           return;
+          }
+        }
+      }
+    }
 
+    //TODO(jczaja): iterate over outputs searching for output with origianal name
+    // then rename it
     mkldnn_outplace_out->RenameVar(mkldnn_outplace_in->Name());
     mkldnn_outplace_op->Op()->SetOutput("Out",
               std::vector<std::string>({mkldnn_outplace_out->Name()}));
