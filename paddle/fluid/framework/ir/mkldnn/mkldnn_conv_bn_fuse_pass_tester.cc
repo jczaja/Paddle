@@ -24,8 +24,8 @@
 
 USE_OP(batch_norm);
 USE_OP_DEVICE_KERNEL(batch_norm, MKLDNN);
-USE_OP(conv2d);
-USE_OP_DEVICE_KERNEL(conv2d, MKLDNN);
+USE_OP(conv2d_transpose);
+USE_OP_DEVICE_KERNEL(conv2d_transpose, MKLDNN);
 USE_OP(elementwise_add);
 USE_OP_DEVICE_KERNEL(elementwise_add, MKLDNN);
 USE_OP(gelu);
@@ -118,8 +118,8 @@ class MKLDNNConvBatchNormPassTest {
 
     // Two graphs. Execute both and compare results
 
-
     VLOG(3) << DebugString(graph);
+
 
     EXPECT_EQ(1, 1);
   }
