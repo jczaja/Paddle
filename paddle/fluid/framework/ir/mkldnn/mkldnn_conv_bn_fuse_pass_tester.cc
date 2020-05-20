@@ -121,9 +121,8 @@ class MKLDNNConvBatchNormPassTest {
 
     graph.reset(pass->Apply(graph.release()));
 
-    unsigned use_mkldnn_true_count = 0;
-    std::unordered_map<std::string, std::string> input_names;
-    std::unordered_map<std::string, std::string> output_names;
+    // Two graphs. Execute both and compare results
+
 
     VLOG(3) << DebugString(graph);
 
