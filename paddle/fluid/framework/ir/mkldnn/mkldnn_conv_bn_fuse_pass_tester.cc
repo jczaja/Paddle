@@ -12,11 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <gtest/gtest.h>
 #include <string>
 
 #include "paddle/fluid/framework/ir/graph_traits.h"
 #include "paddle/fluid/framework/ir/mkldnn/conv_elementwise_add_mkldnn_fuse_pass.h"
+#include <gtest/gtest.h>
+#include <boost/logic/tribool.hpp>
+#include <unordered_set>
 #include "paddle/fluid/framework/ir/pass_tester_helper.h"
 #include "paddle/fluid/framework/op_registry.h"
 
@@ -26,9 +28,6 @@ namespace paddle {
 namespace framework {
 namespace ir {
 
-}  // namespace ir
-}  // namespace framework
-}  // namespace paddle
 
 
 class MKLDNNConvBatchNormPassTest {
@@ -53,12 +52,15 @@ class MKLDNNConvBatchNormPassTest {
                                                "tanh"}
                    .count(type)) {
       op->SetInput("X", inputs);
-    } else if (type == "softmax") {
-      op->SetAttr("axis", -1);
-      op->SetInput("X", inputs);
     } else if (type == "elementwise_add") {
       op->SetInput("X", {inputs[0]});
       op->SetInput("Y", {inputs[1]});
+    } else if (type == "batch_norm") {
+      op->SetInput("X", {inputs[0]});
+      op->SetInput("Scale", {inputs[1]});
+      op->SetInput("Bias", {inputs[2]});
+      op->SetInput("Mean", {inputs[3]});
+      op->SetInput("Variance", {inputs[4]});
     } else {
       FAIL() << "Unexpected operator type.";
     }
@@ -138,5 +140,9 @@ class MKLDNNConvBatchNormPassTest {
 TEST(MKLDNNConvBatchNormPassTest , inplace_softmax) {
   MKLDNNConvBatchNormPassTest().MainTest("softmax", false, 1);
 }
+
+}  // namespace ir
+}  // namespace framework
+}  // namespace paddle
 
 USE_PASS(conv_elementwise_add_mkldnn_fuse_pass);
