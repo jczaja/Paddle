@@ -108,19 +108,13 @@ class MKLDNNConvBatchNormPassTest {
     SetOp(&prog, "gelu", "gelu1", std::vector<std::string>({"n"}),
           std::vector<std::string>({"m"}),
           mkldnn_enabled_op.compare("gelu") == 0);
-    if (branched == true) {
-      SetOp(&prog, "softmax", "softmax2", std::vector<std::string>({"g"}),
-            std::vector<std::string>({"z"}),
-            mkldnn_enabled_op.compare("softmax") == 0);
-    }
 
     return prog;
   }
 
  public:
-  void MainTest(const std::string& mkldnn_enabled_op, bool branched,
-                unsigned expected_use_mkldnn_true_count) {
-    auto prog = BuildProgramDesc(mkldnn_enabled_op, branched);
+  void MainTest(const std::string& mkldnn_enabled_op, bool is_elementwise_add) {
+    auto prog = BuildProgramDesc(mkldnn_enabled_op, is_elementwise_add);
 
     std::unique_ptr<ir::Graph> graph(new ir::Graph(prog));
     auto pass = PassRegistry::Instance().Get("conv_transpose_eltwiseadd_bn_fuse_pass");
@@ -138,7 +132,7 @@ class MKLDNNConvBatchNormPassTest {
 };
 
 TEST(MKLDNNConvBatchNormPassTest , inplace_softmax) {
-  MKLDNNConvBatchNormPassTest().MainTest("softmax", false, 1);
+  MKLDNNConvBatchNormPassTest().MainTest("softmax", false);
 }
 
 }  // namespace ir
