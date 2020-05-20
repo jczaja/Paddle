@@ -22,7 +22,13 @@
 #include "paddle/fluid/framework/ir/pass_tester_helper.h"
 #include "paddle/fluid/framework/op_registry.h"
 
+USE_OP(batch_norm);
+USE_OP_DEVICE_KERNEL(batch_norm, MKLDNN);
 USE_OP(conv2d);
+USE_OP_DEVICE_KERNEL(conv2d, MKLDNN);
+USE_OP(elementwise_add);
+USE_OP_DEVICE_KERNEL(elementwise_add, MKLDNN);
+USE_OP(gelu);
 
 namespace paddle {
 namespace framework {
@@ -67,8 +73,7 @@ class MKLDNNConvBatchNormPassTest {
     op->SetOutput("Out", {outputs[0]});
   }
 
-  ProgramDesc BuildProgramDesc(const std::string& mkldnn_enabled_op,
-                               bool is_elementwise_add) {
+  ProgramDesc BuildProgramDesc(bool is_elementwise_add) {
     ProgramDesc prog;
 
     for (auto& v :
@@ -83,38 +88,28 @@ class MKLDNNConvBatchNormPassTest {
 
     SetOp(&prog, "conv2d", "conv1",
           std::vector<std::string>({"a", "weights", "bias"}),
-          std::vector<std::string>({"f"}), boost::indeterminate);
-    SetOp(&prog, "relu", "relu1", std::vector<std::string>({"f"}),
-          std::vector<std::string>({"g"}),
-          mkldnn_enabled_op.compare("relu") == 0);
-    SetOp(&prog, "softmax", "softmax1", std::vector<std::string>({"g"}),
-          std::vector<std::string>({"h"}),
-          mkldnn_enabled_op.compare("softmax") == 0);
+          std::vector<std::string>({"f"}), true);
+    if (is_elementwise_add == true) {
     SetOp(&prog, "elementwise_add", "elementwise_add1",
-          std::vector<std::string>({"h", "i"}), std::vector<std::string>({"j"}),
-          mkldnn_enabled_op.compare("elementwise_add") == 0);
-    SetOp(&prog, "relu", "relu2", std::vector<std::string>({"j"}),
-          std::vector<std::string>({"k"}),
-          mkldnn_enabled_op.compare("relu") == 0);
-    SetOp(&prog, "tanh", "tanh1", std::vector<std::string>({"k"}),
-          std::vector<std::string>({"l"}),
-          mkldnn_enabled_op.compare("tanh") == 0);
-    SetOp(&prog, "relu", "relu3", std::vector<std::string>({"l"}),
-          std::vector<std::string>({"m"}),
-          mkldnn_enabled_op.compare("relu") == 0);
-    SetOp(&prog, "leaky_relu", "leaky_relu1", std::vector<std::string>({"m"}),
-          std::vector<std::string>({"n"}),
-          mkldnn_enabled_op.compare("leaky_relu") == 0);
-    SetOp(&prog, "gelu", "gelu1", std::vector<std::string>({"n"}),
-          std::vector<std::string>({"m"}),
-          mkldnn_enabled_op.compare("gelu") == 0);
+          std::vector<std::string>({"f", "g"}), std::vector<std::string>({"h"}),
+          true);
+    SetOp(&prog, "batch_norm", "batch_norm1",
+          std::vector<std::string>({"h", "scale","bias_bn", "mean", "variance"}),
+          std::vector<std::string>({"i"}), true);
+    } else {
+    SetOp(&prog, "batch_norm", "batch_norm1",
+          std::vector<std::string>({"f", "scale","bias_bn", "mean", "variance"}),
+          std::vector<std::string>({"i"}), true);
+    }
+    SetOp(&prog, "gelu", "gelu1", std::vector<std::string>({"i"}),
+          std::vector<std::string>({"j"}), true);
 
     return prog;
   }
 
  public:
-  void MainTest(const std::string& mkldnn_enabled_op, bool is_elementwise_add) {
-    auto prog = BuildProgramDesc(mkldnn_enabled_op, is_elementwise_add);
+  void MainTest(bool is_elementwise_add) {
+    auto prog = BuildProgramDesc(is_elementwise_add);
 
     std::unique_ptr<ir::Graph> graph(new ir::Graph(prog));
     auto pass = PassRegistry::Instance().Get("conv_transpose_eltwiseadd_bn_fuse_pass");
@@ -130,8 +125,8 @@ class MKLDNNConvBatchNormPassTest {
   }
 };
 
-TEST(MKLDNNConvBatchNormPassTest , inplace_softmax) {
-  MKLDNNConvBatchNormPassTest().MainTest("softmax", false);
+TEST(MKLDNNConvBatchNormPassTest , conv_elementwise_add_batch_norm) {
+  MKLDNNConvBatchNormPassTest().MainTest(true);
 }
 
 }  // namespace ir
