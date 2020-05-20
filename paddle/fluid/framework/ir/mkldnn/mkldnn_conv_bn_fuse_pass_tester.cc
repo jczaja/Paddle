@@ -68,7 +68,7 @@ class MKLDNNConvBatchNormPassTest {
   }
 
   ProgramDesc BuildProgramDesc(const std::string& mkldnn_enabled_op,
-                               bool branched) {
+                               bool is_elementwise_add) {
     ProgramDesc prog;
 
     for (auto& v :
