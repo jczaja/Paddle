@@ -22,7 +22,7 @@
 #include "paddle/fluid/framework/ir/pass_tester_helper.h"
 #include "paddle/fluid/framework/op_registry.h"
 
-USE_OP(conv);
+USE_OP(conv2d);
 
 namespace paddle {
 namespace framework {
