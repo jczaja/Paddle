@@ -49,7 +49,7 @@ class MKLDNNConvBatchNormPassTest {
     if (!boost::indeterminate(use_mkldnn))
       op->SetAttr("use_mkldnn", use_mkldnn);
 
-    if (type == "conv2d") {
+    if (type == "conv2d_transpose") {
       op->SetAttr("name", name);
       op->SetInput("Input", {inputs[0]});
       op->SetInput("Filter", {inputs[1]});
@@ -78,7 +78,7 @@ class MKLDNNConvBatchNormPassTest {
 
     for (auto& v :
          std::vector<std::string>({"a", "weights", "bias", "f", "g", "h", "i",
-                                   "j", "k", "l", "m", "n", "z"})) {
+                                   "j" })) {
       auto* var = prog.MutableBlock(0)->Var(v);
       var->SetType(proto::VarType::SELECTED_ROWS);
       if (v == "weights" || v == "bias") {
