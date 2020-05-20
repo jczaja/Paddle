@@ -86,7 +86,7 @@ class MKLDNNConvBatchNormPassTest {
       }
     }
 
-    SetOp(&prog, "conv2d", "conv1",
+    SetOp(&prog, "conv2d_transpose", "conv1",
           std::vector<std::string>({"a", "weights", "bias"}),
           std::vector<std::string>({"f"}), true);
     if (is_elementwise_add == true) {
