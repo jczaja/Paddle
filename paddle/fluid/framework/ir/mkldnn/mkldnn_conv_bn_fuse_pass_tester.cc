@@ -145,4 +145,4 @@ TEST(MKLDNNConvBatchNormPassTest , inplace_softmax) {
 }  // namespace framework
 }  // namespace paddle
 
-USE_PASS(conv_elementwise_add_mkldnn_fuse_pass);
+USE_PASS(conv_transpose_eltwiseadd_bn_fuse_pass);
