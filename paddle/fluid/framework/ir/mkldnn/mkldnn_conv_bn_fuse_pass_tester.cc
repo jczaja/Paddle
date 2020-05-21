@@ -58,6 +58,7 @@ class MKLDNNConvBatchNormPassTest {
       op->SetInput("Bias", {inputs[2]});
       op->SetOutput("Output", {outputs[0]});
       op->SetAttr("is_test", true);
+      op->SetAttr("strides", {2,2});
     } else if (std::unordered_set<std::string>{"gelu", "leaky_relu", "relu",
                                                "tanh"}
                    .count(type)) {
@@ -150,6 +151,9 @@ class MKLDNNConvBatchNormPassTest {
     auto* bias_tensor = exe.FindTensor("bias");
     auto* j_tensor = exe.FindTensor("j");
     auto* g_tensor = exe.FindTensor("g");
+
+
+// mb1_ic24oc24_ih8oh16kh2sh2dh0ph0_iw80ow160kw2sw2dw0pw0
 
     a_tensor->Resize({1, 24, 8, 80});
     weights_tensor->Resize({24, 24, 2, 2});
