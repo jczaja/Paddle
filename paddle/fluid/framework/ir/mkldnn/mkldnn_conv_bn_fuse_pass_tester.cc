@@ -118,10 +118,14 @@ class MKLDNNConvBatchNormPassTest {
 
     std::unique_ptr<ir::Graph> graph(new ir::Graph(prog));
     Scope scope;
+    auto place = paddle::platform::CPUPlace();
+    NaiveExecutor exe{place};
     graph->SetNotOwned(kParamScopeAttr, &scope);
-    auto pass = PassRegistry::Instance().Get("conv_transpose_eltwiseadd_bn_fuse_pass");
 
+    auto pass = PassRegistry::Instance().Get("conv_transpose_eltwiseadd_bn_fuse_pass");
     graph.reset(pass->Apply(graph.release()));
+
+    exe.CreateVariables(prog, 0, true, &scope);
 
     // Two graphs. Execute both and compare results
 
