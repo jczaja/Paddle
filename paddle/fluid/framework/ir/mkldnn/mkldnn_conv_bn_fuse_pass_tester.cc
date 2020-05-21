@@ -129,7 +129,7 @@ class MKLDNNConvBatchNormPassTest {
     Scope scope;
     auto place = paddle::platform::CPUPlace();
     NaiveExecutor exe{place};
-    graph->SetNotOwned(kParamScopeAttr, &scope);
+    graph->Set(kParamScopeAttr, &scope);
 
     auto pass = PassRegistry::Instance().Get("conv_transpose_eltwiseadd_bn_fuse_pass");
  //   graph.reset(pass->Apply(graph.release()));
