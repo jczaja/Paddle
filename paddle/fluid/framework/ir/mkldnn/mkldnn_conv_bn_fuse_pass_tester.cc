@@ -152,19 +152,28 @@ class MKLDNNConvBatchNormPassTest {
     auto* j_tensor = exe.FindTensor("j");
     auto* g_tensor = exe.FindTensor("g");
 
+    // Batch Norm
+    auto* bias_bn_tensor = exe.FindTensor("bias_bn"); //shift
+    auto* scale_tensor = exe.FindTensor("scale");
+    auto* mean_tensor = exe.FindTensor("mean");
+    auto* variance_tensor = exe.FindTensor("variance");
 
-// mb1_ic24oc24_ih8oh16kh2sh2dh0ph0_iw80ow160kw2sw2dw0pw0
-
+    // mb1_ic24oc24_ih8oh16kh2sh2dh0ph0_iw80ow160kw2sw2dw0pw0 deconv
     a_tensor->Resize({1, 24, 8, 80});
     weights_tensor->Resize({24, 24, 2, 2});
     bias_tensor->Resize({24});
     g_tensor->Resize({1, 24, 16, 160});
     j_tensor->Resize({1, 24, 16, 160});
 
-   a_tensor->mutable_data<float>(place);
-   g_tensor->mutable_data<float>(place);
-   weights_tensor->mutable_data<float>(place);
-   bias_tensor->mutable_data<float>(place);
+    bias_bn_tensor->Resize({24});
+    scale_tensor->Resize({24});
+    mean_tensor->Resize({24});
+    variance_tensor->Resize({24});
+
+    a_tensor->mutable_data<float>(place);
+    g_tensor->mutable_data<float>(place);
+    weights_tensor->mutable_data<float>(place);
+    bias_tensor->mutable_data<float>(place);
 
    exe.Run();
 
