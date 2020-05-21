@@ -153,9 +153,11 @@ class MKLDNNConvBatchNormPassTest {
     a_tensor->Resize({1, 24, 8, 80});
     weights_tensor->Resize({24, 24, 2, 2});
     bias_tensor->Resize({24});
+    g_tensor->Resize({1, 24, 16, 160});
     j_tensor->Resize({1, 24, 16, 160});
 
    a_tensor->mutable_data<float>(place);
+   g_tensor->mutable_data<float>(place);
    weights_tensor->mutable_data<float>(place);
    bias_tensor->mutable_data<float>(place);
 
