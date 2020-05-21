@@ -56,23 +56,30 @@ class MKLDNNConvBatchNormPassTest {
       op->SetInput("Input", {inputs[0]});
       op->SetInput("Filter", {inputs[1]});
       op->SetInput("Bias", {inputs[2]});
+      op->SetOutput("Output", {outputs[0]});
     } else if (std::unordered_set<std::string>{"gelu", "leaky_relu", "relu",
                                                "tanh"}
                    .count(type)) {
       op->SetInput("X", inputs);
+      op->SetOutput("Out", {outputs[0]});
     } else if (type == "elementwise_add") {
       op->SetInput("X", {inputs[0]});
       op->SetInput("Y", {inputs[1]});
+      op->SetOutput("Out", {outputs[0]});
     } else if (type == "batch_norm") {
       op->SetInput("X", {inputs[0]});
       op->SetInput("Scale", {inputs[1]});
       op->SetInput("Bias", {inputs[2]});
       op->SetInput("Mean", {inputs[3]});
       op->SetInput("Variance", {inputs[4]});
+      op->SetOutput("Y", {outputs[0]});
+      op->SetOutput("MeanOut", {outputs[1]});
+      op->SetOutput("VarianceOut", {outputs[2]});
+      op->SetOutput("SavedMean", {outputs[3]});
+      op->SetOutput("SavedVariance", {outputs[4]});
     } else {
       FAIL() << "Unexpected operator type.";
     }
-    op->SetOutput("Out", {outputs[0]});
   }
 
   ProgramDesc BuildProgramDesc(bool is_elementwise_add) {
