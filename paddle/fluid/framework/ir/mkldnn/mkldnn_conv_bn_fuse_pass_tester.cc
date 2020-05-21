@@ -70,6 +70,7 @@ class MKLDNNConvBatchNormPassTest {
       op->SetOutput("Out", {outputs[0]});
     } else if (type == "batch_norm") {
       op->SetAttr("is_test", true);
+      op->SetAttr("epsilon", 1e-5);
       op->SetInput("X", {inputs[0]});
       op->SetInput("Scale", {inputs[1]});
       op->SetInput("Bias", {inputs[2]});
