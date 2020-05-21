@@ -137,7 +137,7 @@ class MKLDNNConvBatchNormPassTest {
 
     exe.Prepare(&scope, prog, 0, false);
 
-    graph->Set(kParamScopeAttr, &scope);
+    graph->SetNotOwned(kParamScopeAttr, &scope);
 
     auto *my_var = scope.FindVar("a");
 
