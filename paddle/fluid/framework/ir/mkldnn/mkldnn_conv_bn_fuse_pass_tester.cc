@@ -125,10 +125,16 @@ class MKLDNNConvBatchNormPassTest {
     graph->SetNotOwned(kParamScopeAttr, &scope);
 
     auto pass = PassRegistry::Instance().Get("conv_transpose_eltwiseadd_bn_fuse_pass");
-    graph.reset(pass->Apply(graph.release()));
+ //   graph.reset(pass->Apply(graph.release()));
 
     exe.CreateVariables(prog, 0, true, &scope);
     exe.Prepare(&scope, prog, 0, true);
+
+    // Get and initialize vars
+
+    exe.Run();
+
+    // Get result
 
     // Two graphs. Execute both and compare results
 
