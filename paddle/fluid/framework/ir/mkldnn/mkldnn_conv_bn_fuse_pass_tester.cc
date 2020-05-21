@@ -126,7 +126,7 @@ class MKLDNNConvBatchNormPassTest {
   void MainTest(bool is_elementwise_add) {
     auto prog = BuildProgramDesc(is_elementwise_add);
 
-    std::unique_ptr<ir::Graph> graph(new ir::Graph(prog));
+//    std::unique_ptr<ir::Graph> graph(new ir::Graph(prog));
     Scope scope;
     auto place = paddle::platform::CPUPlace();
     NaiveExecutor exe{place};
@@ -138,7 +138,7 @@ class MKLDNNConvBatchNormPassTest {
 
     exe.Prepare(&scope, prog, 0, false);
 
-    graph->SetNotOwned(kParamScopeAttr, &scope);
+ //   graph->SetNotOwned(kParamScopeAttr, &scope);
 
     std::cout << GenScopeTreeDebugInfo(&scope);
 
@@ -162,7 +162,7 @@ class MKLDNNConvBatchNormPassTest {
 
     // Two graphs. Execute both and compare results
 
-    VLOG(3) << DebugString(graph);
+//    VLOG(3) << DebugString(graph);
 
 
     EXPECT_EQ(1, 1);
