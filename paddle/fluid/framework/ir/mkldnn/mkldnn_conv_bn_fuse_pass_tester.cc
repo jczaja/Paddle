@@ -58,7 +58,7 @@ class MKLDNNConvBatchNormPassTest {
       op->SetInput("Bias", {inputs[2]});
       op->SetOutput("Output", {outputs[0]});
       op->SetAttr("is_test", true);
-      op->SetAttr("strides", {2,2});
+      op->SetAttr("strides", std::vector<int>(2,2));
     } else if (std::unordered_set<std::string>{"gelu", "leaky_relu", "relu",
                                                "tanh"}
                    .count(type)) {
