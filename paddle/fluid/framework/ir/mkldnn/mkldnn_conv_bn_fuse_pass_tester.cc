@@ -134,6 +134,7 @@ class MKLDNNConvBatchNormPassTest {
     NaiveExecutor exe{place};
 
     auto pass = PassRegistry::Instance().Get("conv_transpose_eltwiseadd_bn_fuse_pass");
+    graph->SetNotOwned(kParamScopeAttr, &scope);
     graph.reset(pass->Apply(graph.release()));
 
     exe.CreateVariables(prog, 0, true, &scope);
@@ -141,7 +142,6 @@ class MKLDNNConvBatchNormPassTest {
 
     exe.Prepare(&scope, prog, 0, false);
 
-    graph->SetNotOwned(kParamScopeAttr, &scope);
 
     std::cout << GenScopeTreeDebugInfo(&scope);
 
