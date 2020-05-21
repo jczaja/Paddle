@@ -139,7 +139,7 @@ class MKLDNNConvBatchNormPassTest {
 
     graph->SetNotOwned(kParamScopeAttr, &scope);
 
-    GenScopeTreeDebugInfo(&scope);
+    std::cout << GenScopeTreeDebugInfo(&scope);
 
     auto *my_var = scope.FindVar("a");
 
