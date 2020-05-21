@@ -152,7 +152,11 @@ class MKLDNNConvBatchNormPassTest {
     bias_tensor->Resize({24});
     j_tensor->Resize({1, 24, 16, 160});
 
-//    exe.Run();
+   a_tensor->mutable_data<float>(place);
+   weights_tensor->mutable_data<float>(place);
+   bias_tensor->mutable_data<float>(place);
+
+   exe.Run();
 
     // Get result
 
