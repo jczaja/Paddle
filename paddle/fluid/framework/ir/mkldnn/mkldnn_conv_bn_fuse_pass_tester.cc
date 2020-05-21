@@ -135,6 +135,7 @@ class MKLDNNConvBatchNormPassTest {
  //   graph.reset(pass->Apply(graph.release()));
 
     exe.CreateVariables(prog, 0, true, &scope);
+    exe.CreateVariables(prog, 0, false, &scope);
 
     exe.Prepare(&scope, prog, 0, false);
 
