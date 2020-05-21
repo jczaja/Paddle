@@ -110,10 +110,10 @@ class MKLDNNConvBatchNormPassTest {
  public:
   void MainTest(bool is_elementwise_add) {
     auto prog = BuildProgramDesc(is_elementwise_add);
-    Scope scope;
-    (*graph)->SetNotOwned(kParamScopeAttr, &scope);
 
     std::unique_ptr<ir::Graph> graph(new ir::Graph(prog));
+    Scope scope;
+    (*graph)->SetNotOwned(kParamScopeAttr, &scope);
     auto pass = PassRegistry::Instance().Get("conv_transpose_eltwiseadd_bn_fuse_pass");
 
     graph.reset(pass->Apply(graph.release()));
