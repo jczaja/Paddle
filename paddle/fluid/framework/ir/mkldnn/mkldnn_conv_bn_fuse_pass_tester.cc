@@ -128,11 +128,15 @@ class MKLDNNConvBatchNormPassTest {
  //   graph.reset(pass->Apply(graph.release()));
 
     exe.CreateVariables(prog, 0, true, &scope);
-    exe.Prepare(&scope, prog, 0, true);
+//    std::vector<std::string> vars{"a", "f", "g", "h", "i", "j"};
+//    for( auto& var_name : vars) {
+//
+//    }
+    exe.Prepare(&scope, prog, 0, false);
 
     // Get and initialize vars
 
-    exe.Run();
+//    exe.Run();
 
     // Get result
 
