@@ -77,7 +77,10 @@ class MKLDNNConvBatchNormPassTest {
     ProgramDesc prog;
 
     for (auto& v :
-         std::vector<std::string>({"a", "weights", "bias", "bias_bn", "scale", "mean", "variance", "f", "g", "h", "i", "j" })) {
+         std::vector<std::string>({"a", "weights", "bias", "bias_bn", 
+         "scale", "mean", "variance", "mean_out", "variance_out", 
+         "saved_mean", "saved_variance",
+          "f", "g", "h", "i", "j" })) {
       auto* var = prog.MutableBlock(0)->Var(v);
       var->SetType(proto::VarType::SELECTED_ROWS);
       if (v == "weights" || v == "bias" || v == "bias_bn" ||
@@ -95,11 +98,13 @@ class MKLDNNConvBatchNormPassTest {
           true);
     SetOp(&prog, "batch_norm", "batch_norm1",
           std::vector<std::string>({"h", "scale","bias_bn", "mean", "variance"}),
-          std::vector<std::string>({"i"}), true);
+          std::vector<std::string>({"i", "mean_out", "variance out",
+           "saved_mean", "saved_variance"}), true);
     } else {
     SetOp(&prog, "batch_norm", "batch_norm1",
           std::vector<std::string>({"f", "scale","bias_bn", "mean", "variance"}),
-          std::vector<std::string>({"i"}), true);
+          std::vector<std::string>({"i", "mean_out", "variance out",
+           "saved_mean", "saved_variance"}), true);
     }
     SetOp(&prog, "gelu", "gelu1", std::vector<std::string>({"i"}),
           std::vector<std::string>({"j"}), true);
