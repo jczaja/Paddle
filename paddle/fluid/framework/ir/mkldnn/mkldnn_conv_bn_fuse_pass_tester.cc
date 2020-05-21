@@ -77,11 +77,11 @@ class MKLDNNConvBatchNormPassTest {
     ProgramDesc prog;
 
     for (auto& v :
-         std::vector<std::string>({"a", "weights", "bias", "f", "g", "h", "i",
-                                   "j" })) {
+         std::vector<std::string>({"a", "weights", "bias", "bias_bn", "mean", "variance", "f", "g", "h", "i", "j" })) {
       auto* var = prog.MutableBlock(0)->Var(v);
       var->SetType(proto::VarType::SELECTED_ROWS);
-      if (v == "weights" || v == "bias") {
+      if (v == "weights" || v == "bias" || v == "bias_bn" ||
+         v == "scale" || v == "mean" ||v == "variance" ) {
         var->SetPersistable(true);
       }
     }
