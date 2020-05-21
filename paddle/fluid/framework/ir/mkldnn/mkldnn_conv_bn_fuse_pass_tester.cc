@@ -21,6 +21,8 @@
 #include <unordered_set>
 #include "paddle/fluid/framework/ir/pass_tester_helper.h"
 #include "paddle/fluid/framework/op_registry.h"
+#include "paddle/fluid/framework/naive_executor.h"
+#include "paddle/fluid/platform/place.h"
 
 USE_OP(batch_norm);
 USE_OP_DEVICE_KERNEL(batch_norm, MKLDNN);
@@ -126,6 +128,7 @@ class MKLDNNConvBatchNormPassTest {
     graph.reset(pass->Apply(graph.release()));
 
     exe.CreateVariables(prog, 0, true, &scope);
+    exe.Prepare(&scope, prog, 0, true);
 
     // Two graphs. Execute both and compare results
 
