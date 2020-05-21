@@ -111,7 +111,7 @@ class MKLDNNConvBatchNormPassTest {
           true);
     SetOp(&prog, "batch_norm", "batch_norm1",
           std::vector<std::string>({"h", "scale","bias_bn", "mean", "variance"}),
-          std::vector<std::string>({"i", "mean_out", "variance out",
+          std::vector<std::string>({"i", "mean", "variance",
            "saved_mean", "saved_variance"}), true);
     } else {
     SetOp(&prog, "batch_norm", "batch_norm1",
