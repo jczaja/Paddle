@@ -135,7 +135,6 @@ class MKLDNNConvBatchNormPassTest {
 
     auto pass = PassRegistry::Instance().Get("conv_transpose_eltwiseadd_bn_fuse_pass");
     graph->SetNotOwned(kParamScopeAttr, &scope);
-    graph.reset(pass->Apply(graph.release()));
 
     exe.CreateVariables(prog, 0, true, &scope);
     exe.CreateVariables(prog, 0, false, &scope);
@@ -178,6 +177,7 @@ class MKLDNNConvBatchNormPassTest {
     mean_tensor->mutable_data<float>(place);
     variance_tensor->mutable_data<float>(place);
 
+    graph.reset(pass->Apply(graph.release()));
     exe.Run();
 
     // Get result
