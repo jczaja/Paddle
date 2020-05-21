@@ -149,6 +149,7 @@ class MKLDNNConvBatchNormPassTest {
     auto* weights_tensor = exe.FindTensor("weights");
     auto* bias_tensor = exe.FindTensor("bias");
     auto* j_tensor = exe.FindTensor("j");
+    auto* g_tensor = exe.FindTensor("g");
 
     a_tensor->Resize({1, 24, 8, 80});
     weights_tensor->Resize({24, 24, 2, 2});
