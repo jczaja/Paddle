@@ -93,7 +93,7 @@ class MKLDNNConvBatchNormPassTest {
       auto* var = prog.MutableBlock(0)->Var(v);
       var->SetType(proto::VarType::LOD_TENSOR);
       if (v == "weights" || v == "bias" || v == "bias_bn" ||
-         v == "scale" || v == "mean" ||v == "variance" ) {
+         v == "scale" || v == "mean" ||v == "variance" || v == "a" ) {
         var->SetPersistable(true);
       }
     }
@@ -140,9 +140,6 @@ class MKLDNNConvBatchNormPassTest {
     graph->SetNotOwned(kParamScopeAttr, &scope);
 
     std::cout << GenScopeTreeDebugInfo(&scope);
-
-    auto *my_var = scope.FindVar("a");
-
 
     auto* a_tensor = exe.FindTensor("a");
     auto* weights_tensor = exe.FindTensor("weights");
