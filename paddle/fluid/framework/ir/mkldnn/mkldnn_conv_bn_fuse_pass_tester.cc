@@ -57,6 +57,7 @@ class MKLDNNConvBatchNormPassTest {
       op->SetInput("Filter", {inputs[1]});
       op->SetInput("Bias", {inputs[2]});
       op->SetOutput("Output", {outputs[0]});
+      op->SetAttr("is_test", true);
     } else if (std::unordered_set<std::string>{"gelu", "leaky_relu", "relu",
                                                "tanh"}
                    .count(type)) {
@@ -67,6 +68,7 @@ class MKLDNNConvBatchNormPassTest {
       op->SetInput("Y", {inputs[1]});
       op->SetOutput("Out", {outputs[0]});
     } else if (type == "batch_norm") {
+      op->SetAttr("is_test", true);
       op->SetInput("X", {inputs[0]});
       op->SetInput("Scale", {inputs[1]});
       op->SetInput("Bias", {inputs[2]});
