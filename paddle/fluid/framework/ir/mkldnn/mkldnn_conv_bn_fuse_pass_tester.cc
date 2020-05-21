@@ -90,8 +90,7 @@ class MKLDNNConvBatchNormPassTest {
 
     for (auto& v :
          std::vector<std::string>({"a", "weights", "bias", "bias_bn", 
-         "scale", "mean", "variance", "mean_out", "variance_out", 
-         "saved_mean", "saved_variance",
+         "scale", "mean", "variance", "saved_mean", "saved_variance",
           "f", "g", "h", "i", "j" })) {
       auto* var = prog.MutableBlock(0)->Var(v);
       var->SetType(proto::VarType::LOD_TENSOR);
@@ -129,20 +128,20 @@ class MKLDNNConvBatchNormPassTest {
   void MainTest(bool is_elementwise_add) {
     auto prog = BuildProgramDesc(is_elementwise_add);
 
-//    std::unique_ptr<ir::Graph> graph(new ir::Graph(prog));
+    std::unique_ptr<ir::Graph> graph(new ir::Graph(prog));
     Scope scope;
     auto place = paddle::platform::CPUPlace();
     NaiveExecutor exe{place};
 
     auto pass = PassRegistry::Instance().Get("conv_transpose_eltwiseadd_bn_fuse_pass");
- //   graph.reset(pass->Apply(graph.release()));
+    graph.reset(pass->Apply(graph.release()));
 
     exe.CreateVariables(prog, 0, true, &scope);
     exe.CreateVariables(prog, 0, false, &scope);
 
     exe.Prepare(&scope, prog, 0, false);
 
- //   graph->SetNotOwned(kParamScopeAttr, &scope);
+    graph->SetNotOwned(kParamScopeAttr, &scope);
 
     std::cout << GenScopeTreeDebugInfo(&scope);
 
@@ -185,7 +184,7 @@ class MKLDNNConvBatchNormPassTest {
 
     // Two graphs. Execute both and compare results
 
-//    VLOG(3) << DebugString(graph);
+    VLOG(3) << DebugString(graph);
 
 
     EXPECT_EQ(1, 1);
