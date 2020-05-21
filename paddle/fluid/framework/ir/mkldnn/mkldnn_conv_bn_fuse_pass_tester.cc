@@ -174,6 +174,10 @@ class MKLDNNConvBatchNormPassTest {
     g_tensor->mutable_data<float>(place);
     weights_tensor->mutable_data<float>(place);
     bias_tensor->mutable_data<float>(place);
+    bias_bn_tensor->mutable_data<float>(place);
+    scale_tensor->mutable_data<float>(place);
+    mean_tensor->mutable_data<float>(place);
+    variance_tensor->mutable_data<float>(place);
 
    exe.Run();
 
