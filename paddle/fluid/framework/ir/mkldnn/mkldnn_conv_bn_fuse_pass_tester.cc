@@ -137,7 +137,7 @@ class MKLDNNConvBatchNormPassTest {
     exe.CreateVariables(prog, 0, true, &scope);
 
 
-    exe.Prepare(&scope, prog, 0, false);
+    exe.Prepare(nullptr, prog, 0, false);
 
     // Get and initialize vars
 //    mb1_ic24oc24_ih8oh16kh2sh2dh0ph0_iw80ow160kw2sw2dw0pw0
