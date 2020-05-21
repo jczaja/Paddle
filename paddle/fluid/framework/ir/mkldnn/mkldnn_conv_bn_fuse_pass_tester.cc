@@ -91,7 +91,7 @@ class MKLDNNConvBatchNormPassTest {
          "saved_mean", "saved_variance",
           "f", "g", "h", "i", "j" })) {
       auto* var = prog.MutableBlock(0)->Var(v);
-      var->SetType(proto::VarType::SELECTED_ROWS);
+      var->SetType(proto::VarType::LOD_TENSOR);
       if (v == "weights" || v == "bias" || v == "bias_bn" ||
          v == "scale" || v == "mean" ||v == "variance" ) {
         var->SetPersistable(true);
@@ -141,6 +141,10 @@ class MKLDNNConvBatchNormPassTest {
 
     // Get and initialize vars
 //    mb1_ic24oc24_ih8oh16kh2sh2dh0ph0_iw80ow160kw2sw2dw0pw0
+
+
+    auto *my_var = scope.FindVar("a");
+
 
     auto* a_tensor = exe.FindTensor("a");
     auto* weights_tensor = exe.FindTensor("weights");
