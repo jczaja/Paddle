@@ -135,13 +135,22 @@ class MKLDNNConvBatchNormPassTest {
  //   graph.reset(pass->Apply(graph.release()));
 
     exe.CreateVariables(prog, 0, true, &scope);
-//    std::vector<std::string> vars{"a", "f", "g", "h", "i", "j"};
-//    for( auto& var_name : vars) {
-//
-//    }
+
+
     exe.Prepare(&scope, prog, 0, false);
 
     // Get and initialize vars
+//    mb1_ic24oc24_ih8oh16kh2sh2dh0ph0_iw80ow160kw2sw2dw0pw0
+
+    auto* a_tensor = exe.FindTensor("a");
+    auto* weights_tensor = exe.FindTensor("weights");
+    auto* bias_tensor = exe.FindTensor("bias");
+    auto* j_tensor = exe.FindTensor("j");
+
+    a_tensor->Resize({1, 24, 8, 80});
+    weights_tensor->Resize({24, 24, 2, 2});
+    bias_tensor->Resize({24});
+    j_tensor->Resize({1, 24, 16, 160});
 
 //    exe.Run();
 
