@@ -94,7 +94,7 @@ class MKLDNNConvBatchNormPassTest {
       var->SetType(proto::VarType::LOD_TENSOR);
       if (v == "weights" || v == "bias" || v == "bias_bn" ||
           v == "scale" || v == "mean" ||v == "variance" ||
-          v == "a" || v = "j") {
+          v == "a" || v == "j") {
         var->SetPersistable(true);
       }
     }
