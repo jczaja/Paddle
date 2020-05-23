@@ -158,11 +158,11 @@ class MKLDNNConvBatchNormPassTest {
     auto* variance_tensor = exe.FindTensor("variance");
 
     // mb1_ic24oc24_ih8oh16kh2sh2dh0ph0_iw80ow160kw2sw2dw0pw0 deconv
-    a_tensor->Resize({1, 24, 8, 80});
+    a_tensor->Resize({1, 24, 160, 160});
     weights_tensor->Resize({24, 24, 2, 2});
     bias_tensor->Resize({24});
-    g_tensor->Resize({1, 24, 16, 160});
-    j_tensor->Resize({1, 24, 16, 160});
+    g_tensor->Resize({24});
+    j_tensor->Resize({1, 24, 320, 320});
 
     bias_bn_tensor->Resize({24});
     scale_tensor->Resize({24});
@@ -178,7 +178,7 @@ class MKLDNNConvBatchNormPassTest {
     mean_tensor->mutable_data<float>(place);
     variance_tensor->mutable_data<float>(place);
 
-    graph.reset(pass->Apply(graph.release()));
+    //graph.reset(pass->Apply(graph.release()));
     exe.Run();
 
     // Get result
