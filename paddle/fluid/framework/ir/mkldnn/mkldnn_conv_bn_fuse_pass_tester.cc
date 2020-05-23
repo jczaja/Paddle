@@ -65,6 +65,7 @@ class MKLDNNConvBatchNormPassTest {
       op->SetInput("X", inputs);
       op->SetOutput("Out", {outputs[0]});
     } else if (type == "elementwise_add") {
+      op->SetAttr("axis", static_cast<int>(1));
       op->SetInput("X", {inputs[0]});
       op->SetInput("Y", {inputs[1]});
       op->SetOutput("Out", {outputs[0]});
