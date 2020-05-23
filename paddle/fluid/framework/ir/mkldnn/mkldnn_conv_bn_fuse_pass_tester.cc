@@ -179,7 +179,7 @@ class MKLDNNConvBatchNormPassTest {
     mean_tensor->mutable_data<float>(place);
     variance_tensor->mutable_data<float>(place);
 
-    //graph.reset(pass->Apply(graph.release()));
+    graph.reset(pass->Apply(graph.release()));
     exe.Run();
 
     // Get result
