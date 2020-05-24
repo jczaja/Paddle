@@ -18,6 +18,7 @@
 #include "paddle/fluid/framework/ir/mkldnn/conv_elementwise_add_mkldnn_fuse_pass.h"
 #include <gtest/gtest.h>
 #include <boost/logic/tribool.hpp>
+#include <random>
 #include <unordered_set>
 #include "paddle/fluid/framework/ir/pass_tester_helper.h"
 #include "paddle/fluid/framework/op_registry.h"
@@ -126,6 +127,24 @@ class MKLDNNConvBatchNormPassTest {
     return prog;
   }
 
+  void FillTensorWithFixedData(Tensor *tnsr, float value, platform::CPUPlace place) {
+    float* ptr = tnsr->mutable_data<float>(place);
+    for (int i = 0; i < tnsr->numel(); ++i) {
+      ptr[i] = value; 
+    }
+  }
+
+  void FillTensorWithRandomData(Tensor* tnsr, float lowb, float upb, platform::CPUPlace place)  {
+    float* ptr = tnsr->mutable_data<float>(place);
+    // Initialize input data
+    std::uniform_real_distribution<T> dist(static_cast<T>(lowb),
+                                           static_cast<T>(upb));
+    std::mt19937 engine;
+    for (int i = 0; i < tnsr->numel(); ++i) {
+      ptr[i] = dist(engine);
+    }
+  }
+
  public:
   void MainTest(bool is_elementwise_add) {
     auto prog = BuildProgramDesc(is_elementwise_add);
@@ -142,7 +161,6 @@ class MKLDNNConvBatchNormPassTest {
     exe.CreateVariables(prog, 0, false, &scope);
 
     exe.Prepare(&scope, prog, 0, false);
-
 
     std::cout << GenScopeTreeDebugInfo(&scope);
 
@@ -170,14 +188,14 @@ class MKLDNNConvBatchNormPassTest {
     mean_tensor->Resize({24});
     variance_tensor->Resize({24});
 
-    a_tensor->mutable_data<float>(place);
-    g_tensor->mutable_data<float>(place);
-    weights_tensor->mutable_data<float>(place);
-    bias_tensor->mutable_data<float>(place);
-    bias_bn_tensor->mutable_data<float>(place);
-    scale_tensor->mutable_data<float>(place);
-    mean_tensor->mutable_data<float>(place);
-    variance_tensor->mutable_data<float>(place);
+    FillTensorWithFixedData(a_tensor,1.0f,place);
+    FillTensorWithFixedData(g_tensor,1.0f,place);
+    FillTensorWithFixedData(weights_tensor,1.0f,place);
+    FillTensorWithFixedData(bias_tensor,1.0f,place);
+    FillTensorWithFixedData(bias_bn_tensor,1.0f,place);
+    FillTensorWithFixedData(scale_tensor,1.0f,place);
+    FillTensorWithFixedData(mean_tensor,1.0f,place);
+    FillTensorWithFixedData(variance_tensor,1.0f,place);
 
     graph.reset(pass->Apply(graph.release()));
     exe.Run();
