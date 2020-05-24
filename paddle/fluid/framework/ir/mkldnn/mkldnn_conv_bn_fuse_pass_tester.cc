@@ -137,8 +137,8 @@ class MKLDNNConvBatchNormPassTest {
   void FillTensorWithRandomData(Tensor* tnsr, float lowb, float upb, platform::CPUPlace place)  {
     float* ptr = tnsr->mutable_data<float>(place);
     // Initialize input data
-    std::uniform_real_distribution<T> dist(static_cast<T>(lowb),
-                                           static_cast<T>(upb));
+    std::uniform_real_distribution<T> dist(static_cast<float>(lowb),
+                                           static_cast<float>(upb));
     std::mt19937 engine;
     for (int i = 0; i < tnsr->numel(); ++i) {
       ptr[i] = dist(engine);
