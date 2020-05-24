@@ -145,6 +145,13 @@ class MKLDNNConvBatchNormPassTest {
     }
   }
 
+  void CompareTensors(Tensor* tensor1, Tensor* tensor2) {
+    // check dims
+    for (int i=0; i< tensor1->numel(); ++i) {
+      EXPECT_NEAR(tensor1->data<float>()[i], tensor2->data<float>()[i], 1e-3);
+    }
+  }
+
  public:
   void MainTest(bool is_elementwise_add) {
     auto prog = BuildProgramDesc(is_elementwise_add);
@@ -198,19 +205,19 @@ class MKLDNNConvBatchNormPassTest {
 
     exe.Run();
 
-    // Get result
+    // Get result without IR passes applied
     auto* j_tensor = exe.FindTensor("j");
     Tensor no_ir_result;
     TensorCopy(*j_tensor, place, &no_ir_result);
 
     graph.reset(pass->Apply(graph.release()));
+    exe.Prepare(&scope, prog, 0, false);
+    exe.Run();
 
     // Two graphs. Execute both and compare results
+    Compare(&no_ir_result,j_tensor);
 
     VLOG(3) << DebugString(graph);
-
-
-    EXPECT_EQ(1, 1);
   }
 };
 
