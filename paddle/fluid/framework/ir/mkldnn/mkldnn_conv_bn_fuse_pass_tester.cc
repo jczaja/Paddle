@@ -200,8 +200,8 @@ class MKLDNNConvBatchNormPassTest {
 
     // Get result
     auto* j_tensor = exe.FindTensor("j");
-    Tensor *no_ir_result;
-    TensorCopy(*j_tensor, place, no_ir_result);
+    Tensor no_ir_result;
+    TensorCopy(*j_tensor, place, &no_ir_result);
 
     graph.reset(pass->Apply(graph.release()));
 
