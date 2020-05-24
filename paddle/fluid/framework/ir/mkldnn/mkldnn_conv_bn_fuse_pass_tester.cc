@@ -215,7 +215,7 @@ class MKLDNNConvBatchNormPassTest {
     exe.Run();
 
     // Two graphs. Execute both and compare results
-    Compare(&no_ir_result,j_tensor);
+    CompareTensors(&no_ir_result,j_tensor);
 
     VLOG(3) << DebugString(graph);
   }
