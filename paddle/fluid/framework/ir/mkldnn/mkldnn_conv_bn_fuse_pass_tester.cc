@@ -167,7 +167,6 @@ class MKLDNNConvBatchNormPassTest {
     auto* a_tensor = exe.FindTensor("a");
     auto* weights_tensor = exe.FindTensor("weights");
     auto* bias_tensor = exe.FindTensor("bias");
-//    auto* j_tensor = exe.FindTensor("j");
     auto* g_tensor = exe.FindTensor("g");
 
     // Batch Norm
@@ -197,10 +196,14 @@ class MKLDNNConvBatchNormPassTest {
     FillTensorWithFixedData(mean_tensor,1.0f,place);
     FillTensorWithFixedData(variance_tensor,1.0f,place);
 
-    graph.reset(pass->Apply(graph.release()));
     exe.Run();
 
     // Get result
+    auto* j_tensor = exe.FindTensor("j");
+    Tensor *no_ir_result;
+    TensorCopy(*j_tensor, place, no_ir_result);
+
+    graph.reset(pass->Apply(graph.release()));
 
     // Two graphs. Execute both and compare results
 
