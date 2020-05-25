@@ -208,9 +208,7 @@ class MKLDNNConvBatchNormPassTest {
     exe.Run();
 
     // Get result without IR passes applied
-    auto* j_tensor = exe.FindTensor("j");
-    Tensor no_ir_result;
-    TensorCopy(*j_tensor, place, &no_ir_result);
+    auto* no_ir_result = exe.FindTensor("j");
 
     graph.reset(pass->Apply(graph.release()));
 
@@ -224,9 +222,10 @@ class MKLDNNConvBatchNormPassTest {
     exe_with_pass.Prepare(&scope, optimized_prog, 0, false);
     exe_with_pass.Run();
 
+    auto* ir_result = exe_with_pass.FindTensor("j");
 
     // Two graphs. Execute both and compare results
-    CompareTensors(&no_ir_result,j_tensor);
+    CompareTensors(no_ir_result,ir_result);
 
     VLOG(3) << DebugString(graph);
   }
