@@ -212,9 +212,21 @@ class MKLDNNConvBatchNormPassTest {
     TensorCopy(*j_tensor, place, &no_ir_result);
 
     graph.reset(pass->Apply(graph.release()));
-    auto& optimized_prog = graph->OriginProgram();
+
+    // Get Program from graph
+    ProgramDesc optimized_prog;
+    auto graph2program_pass = paddle::framework::ir::PassRegistry::Instance().Get("graph_to_program_pass");
+    pass->SetNotOwned<paddle::framework::ProgramDesc>("program", &compiled_prog);
+    pass->Apply(graph.release());
+
     exe.Prepare(&scope, optimized_prog, 0, false);
     exe.Run();
+
+
+
+
+
+
 
     // Two graphs. Execute both and compare results
     CompareTensors(&no_ir_result,j_tensor);
@@ -232,3 +244,4 @@ TEST(MKLDNNConvBatchNormPassTest , conv_elementwise_add_batch_norm) {
 }  // namespace paddle
 
 USE_PASS(conv_transpose_eltwiseadd_bn_fuse_pass);
+USE_PASS(graph_to_program_pass);
