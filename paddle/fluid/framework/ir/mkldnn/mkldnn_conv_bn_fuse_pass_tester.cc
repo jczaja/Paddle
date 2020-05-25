@@ -230,7 +230,7 @@ class MKLDNNConvBatchNormPassTest {
     auto* ir_result = exe_with_pass.FindTensor("j");
 
     // Two graphs. Execute both and compare results
-    CompareTensors(&no_ir_result,j_tensor);
+    CompareTensors(&no_ir_result,ir_result);
 
     VLOG(3) << DebugString(graph);
   }
