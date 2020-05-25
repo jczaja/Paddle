@@ -216,7 +216,7 @@ class MKLDNNConvBatchNormPassTest {
     // Get Program from graph
     ProgramDesc optimized_prog;
     auto graph2program_pass = paddle::framework::ir::PassRegistry::Instance().Get("graph_to_program_pass");
-    pass->SetNotOwned<paddle::framework::ProgramDesc>("program", &compiled_prog);
+    pass->SetNotOwned<paddle::framework::ProgramDesc>("program", &optimized_prog);
     pass->Apply(graph.release());
 
     exe.Prepare(&scope, optimized_prog, 0, false);
