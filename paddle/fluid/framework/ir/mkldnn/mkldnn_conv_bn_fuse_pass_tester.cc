@@ -220,13 +220,9 @@ class MKLDNNConvBatchNormPassTest {
     graph2program_pass->SetNotOwned<paddle::framework::ProgramDesc>("program", &optimized_prog);
     graph2program_pass->Apply(graph.release());
 
-    exe.Prepare(&scope, optimized_prog, 0, false);
-    exe.Run();
-
-
-
-
-
+    NaiveExecutor exe_with_pass{place};
+    exe_with_pass.Prepare(&scope, optimized_prog, 0, false);
+    exe_with_pass.Run();
 
 
     // Two graphs. Execute both and compare results
