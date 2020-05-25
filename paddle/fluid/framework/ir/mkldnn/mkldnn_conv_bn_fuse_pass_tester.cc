@@ -32,6 +32,7 @@ USE_OP_DEVICE_KERNEL(conv2d_transpose, MKLDNN);
 USE_OP(elementwise_add);
 USE_OP_DEVICE_KERNEL(elementwise_add, MKLDNN);
 USE_OP(gelu);
+USE_OP_DEVICE_KERNEL(gelu, MKLDNN);
 
 namespace paddle {
 namespace framework {
