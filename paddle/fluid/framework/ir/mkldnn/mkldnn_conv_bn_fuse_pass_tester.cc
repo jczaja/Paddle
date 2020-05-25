@@ -212,8 +212,8 @@ class MKLDNNConvBatchNormPassTest {
     TensorCopy(*j_tensor, place, &no_ir_result);
 
     graph.reset(pass->Apply(graph.release()));
-    prog = graph->OriginProgram();
-    exe.Prepare(&scope, prog, 0, false);
+    auto& optimized_prog = graph->OriginProgram();
+    exe.Prepare(&scope, optimized_prog, 0, false);
     exe.Run();
 
     // Two graphs. Execute both and compare results
