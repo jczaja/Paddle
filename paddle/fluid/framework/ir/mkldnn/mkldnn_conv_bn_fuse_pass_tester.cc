@@ -154,15 +154,17 @@ class MKLDNNConvBatchNormPassTest {
 
  public:
   void MainTest(bool is_elementwise_add) {
-    auto prog = BuildProgramDesc(is_elementwise_add);
+    auto base_prog = BuildProgramDesc(is_elementwise_add);
 
-    std::unique_ptr<ir::Graph> graph(new ir::Graph(prog));
+    std::unique_ptr<ir::Graph> graph(new ir::Graph(base_prog));
     Scope scope;
     auto place = paddle::platform::CPUPlace();
     NaiveExecutor exe{place};
 
     auto pass = PassRegistry::Instance().Get("conv_transpose_eltwiseadd_bn_fuse_pass");
     graph->SetNotOwned(kParamScopeAttr, &scope);
+
+    auto& prog = graph->OriginProgram();
 
     exe.CreateVariables(prog, 0, true, &scope);
     exe.CreateVariables(prog, 0, false, &scope);
@@ -187,7 +189,6 @@ class MKLDNNConvBatchNormPassTest {
     weights_tensor->Resize({24, 24, 2, 2});
     bias_tensor->Resize({24});
     g_tensor->Resize({24});
-//    j_tensor->Resize({1, 24, 320, 320});
 
     bias_bn_tensor->Resize({24});
     scale_tensor->Resize({24});
@@ -211,6 +212,7 @@ class MKLDNNConvBatchNormPassTest {
     TensorCopy(*j_tensor, place, &no_ir_result);
 
     graph.reset(pass->Apply(graph.release()));
+    prog = graph->OriginProgram();
     exe.Prepare(&scope, prog, 0, false);
     exe.Run();
 
