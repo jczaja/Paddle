@@ -49,6 +49,16 @@ Graph* Pass::Apply(Graph* graph) const {
     graph->Set<PassRecorder>(kPassRecorder, new PassRecorder);
   }
   graph->Get<PassRecorder>(kPassRecorder).insert(Type());
+#ifdef PADDLE_WITH_MKLDNN
+  // Clear mkl-dnn cache,
+  // Passes can change params, tensors, so caching need to be discarded
+  platform::DeviceContextPool& pool = platform::DeviceContextPool::Instance();
+  platform::MKLDNNDeviceContext* dev_ctx =
+      (platform::MKLDNNDeviceContext*)pool.Get(paddle::platform::CPUPlace());
+  dev_ctx->ResetBlobMap();
+  platform::MKLDNNDeviceContext::tls().set_cur_paddle_data_layout(
+      paddle::framework::DataLayout::kNCHW);
+#endif
   return graph;
 }
 
