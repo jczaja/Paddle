@@ -57,7 +57,6 @@ class MKLDNNConvBatchNormPassTest {
       op->SetAttr("name", name);
       op->SetInput("Input", {inputs[0]});
       op->SetInput("Filter", {inputs[1]});
-      op->SetInput("Bias", {inputs[2]});
       op->SetOutput("Output", {outputs[0]});
       op->SetAttr("is_test", true);
       op->SetAttr("strides", std::vector<int>(2,2));
