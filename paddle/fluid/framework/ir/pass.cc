@@ -18,6 +18,7 @@ limitations under the License. */
 #include <utility>
 
 #include "paddle/fluid/framework/ir/graph_helper.h"
+#include "paddle/fluid/platform/device_context.h"
 
 namespace paddle {
 namespace framework {
