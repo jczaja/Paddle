@@ -195,8 +195,8 @@ class MKLDNNConvBatchNormPassTest {
     mean_tensor->Resize({24});
     variance_tensor->Resize({24});
 
-    FillTensorWithFixedData(a_tensor,1.0f,place);
-    FillTensorWithFixedData(g_tensor,1.0f,place);
+    FillTensorWithRandomData(a_tensor,1.0f,2.0f,place);
+    FillTensorWithRandomData(g_tensor,1.0f,2.0f,place);
     FillTensorWithRandomData(weights_tensor,1.0f,2.0f,place);
     FillTensorWithRandomData(bias_bn_tensor,1.0f,2.0f,place);
     FillTensorWithRandomData(scale_tensor,1.0f,2.0f,place);
@@ -221,9 +221,8 @@ class MKLDNNConvBatchNormPassTest {
     graph2program_pass->SetNotOwned<paddle::framework::ProgramDesc>("program", &optimized_prog);
     graph2program_pass->Apply(graph.release());
 
-    NaiveExecutor exe_with_pass{place};
-    exe_with_pass.Prepare(&scope, optimized_prog, 0, false);
-    exe_with_pass.Run();
+    exe.Prepare(&scope, optimized_prog, 0, false);
+    exe.Run();
 
     auto* ir_result = exe_with_pass.FindTensor("j");
 
@@ -233,6 +232,10 @@ class MKLDNNConvBatchNormPassTest {
     VLOG(3) << DebugString(graph);
   }
 };
+
+TEST(MKLDNNConvBatchNormPassTest , conv_batch_norm) {
+  MKLDNNConvBatchNormPassTest().MainTest(false);
+}
 
 TEST(MKLDNNConvBatchNormPassTest , conv_elementwise_add_batch_norm) {
   MKLDNNConvBatchNormPassTest().MainTest(true);
