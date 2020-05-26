@@ -162,7 +162,9 @@ class MKLDNNConvBatchNormPassTest {
     auto place = paddle::platform::CPUPlace();
     NaiveExecutor exe{place};
 
-    auto pass = PassRegistry::Instance().Get("conv_transpose_eltwiseadd_bn_fuse_pass");
+    auto pass = PassRegistry::Instance().Get(
+    is_elementwise_add ? "conv_transpose_eltwiseadd_bn_fuse_pass":
+    "conv_transpose_bn_fuse_pass");
     graph->SetNotOwned(kParamScopeAttr, &scope);
 
     auto& prog = graph->OriginProgram();
