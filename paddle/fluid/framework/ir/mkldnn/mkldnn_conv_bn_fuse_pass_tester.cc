@@ -244,5 +244,6 @@ TEST(MKLDNNConvBatchNormPassTest , conv_elementwise_add_batch_norm) {
 }  // namespace framework
 }  // namespace paddle
 
+USE_PASS(conv_transpose_bn_fuse_pass);
 USE_PASS(conv_transpose_eltwiseadd_bn_fuse_pass);
 USE_PASS(graph_to_program_pass);
