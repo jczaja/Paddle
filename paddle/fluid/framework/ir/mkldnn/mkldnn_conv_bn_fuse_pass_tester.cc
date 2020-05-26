@@ -93,12 +93,12 @@ class MKLDNNConvBatchNormPassTest {
     ProgramDesc prog;
 
     for (auto& v :
-         std::vector<std::string>({"a", "weights", "bias", "bias_bn", 
+         std::vector<std::string>({"a", "weights", "bias_bn", 
          "scale", "mean", "variance", "saved_mean", "saved_variance",
           "f", "g", "h", "i", "j" })) {
       auto* var = prog.MutableBlock(0)->Var(v);
       var->SetType(proto::VarType::LOD_TENSOR);
-      if (v == "weights" || v == "bias" || v == "bias_bn" ||
+      if (v == "weights" || v == "bias_bn" ||
           v == "scale" || v == "mean" ||v == "variance" ){//||
           //v == "a" || v == "j" || v == "g") {
         var->SetPersistable(true);
@@ -106,7 +106,7 @@ class MKLDNNConvBatchNormPassTest {
     }
 
     SetOp(&prog, "conv2d_transpose", "conv1",
-          std::vector<std::string>({"a", "weights", "bias"}),
+          std::vector<std::string>({"a", "weights"}),
           std::vector<std::string>({"f"}), true);
     if (is_elementwise_add == true) {
     SetOp(&prog, "elementwise_add", "elementwise_add1",
@@ -178,7 +178,6 @@ class MKLDNNConvBatchNormPassTest {
 
     auto* a_tensor = exe.FindTensor("a");
     auto* weights_tensor = exe.FindTensor("weights");
-    auto* bias_tensor = exe.FindTensor("bias");
     auto* g_tensor = exe.FindTensor("g");
 
     // Batch Norm
@@ -190,7 +189,6 @@ class MKLDNNConvBatchNormPassTest {
     // mb1_ic24oc24_ih8oh16kh2sh2dh0ph0_iw80ow160kw2sw2dw0pw0 deconv
     a_tensor->Resize({1, 24, 160, 160});
     weights_tensor->Resize({24, 24, 2, 2});
-    bias_tensor->Resize({24});
     g_tensor->Resize({24});
 
     bias_bn_tensor->Resize({24});
@@ -201,7 +199,6 @@ class MKLDNNConvBatchNormPassTest {
     FillTensorWithFixedData(a_tensor,1.0f,place);
     FillTensorWithFixedData(g_tensor,1.0f,place);
     FillTensorWithRandomData(weights_tensor,1.0f,2.0f,place);
-    FillTensorWithRandomData(bias_tensor,1.0f,2.0f,place);
     FillTensorWithRandomData(bias_bn_tensor,1.0f,2.0f,place);
     FillTensorWithRandomData(scale_tensor,1.0f,2.0f,place);
     FillTensorWithRandomData(mean_tensor,1.0f,2.0f,place);
