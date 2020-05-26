@@ -224,7 +224,7 @@ class MKLDNNConvBatchNormPassTest {
     exe.Prepare(&scope, optimized_prog, 0, false);
     exe.Run();
 
-    auto* ir_result = exe_with_pass.FindTensor("j");
+    auto* ir_result = exe.FindTensor("j");
 
     // Two graphs. Execute both and compare results
     CompareTensors(&no_ir_result,ir_result);
