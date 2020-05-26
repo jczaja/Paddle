@@ -57,8 +57,6 @@ Graph* Pass::Apply(Graph* graph) const {
   platform::MKLDNNDeviceContext* dev_ctx =
       (platform::MKLDNNDeviceContext*)pool.Get(paddle::platform::CPUPlace());
   dev_ctx->ResetBlobMap();
-  platform::MKLDNNDeviceContext::tls().set_cur_paddle_data_layout(
-      paddle::framework::DataLayout::kNCHW);
 #endif
   return graph;
 }
