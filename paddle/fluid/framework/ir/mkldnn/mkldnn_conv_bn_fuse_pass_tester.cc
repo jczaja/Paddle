@@ -198,12 +198,12 @@ class MKLDNNConvBatchNormPassTest {
 
     FillTensorWithFixedData(a_tensor,1.0f,place);
     FillTensorWithFixedData(g_tensor,1.0f,place);
-    FillTensorWithFixedData(weights_tensor,1.0f,place);
-    FillTensorWithFixedData(bias_tensor,1.0f,place);
-    FillTensorWithFixedData(bias_bn_tensor,1.0f,place);
-    FillTensorWithFixedData(scale_tensor,1.0f,place);
-    FillTensorWithFixedData(mean_tensor,1.0f,place);
-    FillTensorWithFixedData(variance_tensor,1.0f,place);
+    FillTensorWithRandomData(weights_tensor,1.0f,2.0f,place);
+    FillTensorWithRandomData(bias_tensor,1.0f,2.0f,place);
+    FillTensorWithRandomData(bias_bn_tensor,1.0f,2.0f,place);
+    FillTensorWithRandomData(scale_tensor,1.0f,2.0f,place);
+    FillTensorWithRandomData(mean_tensor,1.0f,2.0f,place);
+    FillTensorWithRandomData(variance_tensor,1.0f,2.0f,place);
 
     exe.Run();
 
