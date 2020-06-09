@@ -58,6 +58,25 @@ class TestMKLDNNElementwiseAddOp4(TestMKLDNNElementwiseAddOp):
         pass
 
 
+class TestMKLDNNElementwiseAddOp_broadcast_3(TestMKLDNNElementwiseAddOp):
+    def init_input_output(self):
+        self.x = np.random.rand(2, 10, 12, 3).astype(self.dtype)
+        self.y = np.random.rand(10, 12).astype(self.dtype)
+        self.out = self.x + self.y.reshape(1, 10, 12, 1)
+
+    def init_axis(self):
+        self.axis = 1
+
+    # TODO(jczaja): Enable when grad is ready
+    def test_check_grad_normal(self):
+        pass
+
+    def test_check_grad_ingore_x(self):
+        pass
+
+    def test_check_grad_ingore_y(self):
+        pass
+
 ''' INT8 Tests '''
 
 

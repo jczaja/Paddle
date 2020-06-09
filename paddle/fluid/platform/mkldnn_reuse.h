@@ -452,9 +452,11 @@ class BinaryMKLDNNHandler : public platform::MKLDNNHandlerT<T, dnnl::binary> {
       auto src1_md = dnnl::memory::desc(
           src_y_tz, platform::MKLDNNGetDataType<T>(), y->format());
       if (rankdiff > 0) {
-        std::vector<int64_t> ones(rankdiff, 1);
+        int axis = ctx.Attr<int>("axis");
+        axis = (axis == -1 ? rankdiff : axis);
+        std::vector<int64_t> dims1_ex(rankdiff, 1);
         std::vector<int64_t> dims1_ex(src_y_tz);
-        dims1_ex.insert(dims1_ex.begin(), ones.begin(), ones.end());
+        dims1_ex.insert(next(dims1_ex.begin(), axis), src_y_tz.begin(), src_y_tz.end());
         src1_md = src1_md.reshape(dims1_ex);
       }
       const auto dst_md = memory::desc(dst_tz, platform::MKLDNNGetDataType<T>(),
