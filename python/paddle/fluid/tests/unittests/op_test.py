@@ -174,9 +174,9 @@ def copy_bits_from_float_to_uint16(f):
 
 def convert_float_to_uint16(float_list):
     new_output = []
-    for first in float_list.flatten():
+    for val_fp32 in float_list.flatten():
         new_output.append(
-            np.uint16(copy_bits_from_float_to_uint16(fourth)))
+            np.uint16(copy_bits_from_float_to_uint16(val_fp32)))
 
     return np.reshape(new_output, float_list.shape).view(np.uint16)
 
