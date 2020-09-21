@@ -14,26 +14,13 @@
 
 from __future__ import print_function
 
-
 import unittest
 import numpy as np
 import struct
+from paddle.fluid.tests.unittests.op_test import OpTest, convert_float_to_uint16
 from paddle.fluid.tests.unittests.op_test import OpTest
 from paddle.fluid.tests.unittests.test_fusion_gru_op import fusion_gru
 from paddle.fluid.tests.unittests.test_fusion_lstm_op import fc, ACTIVATION
-
-
-def copy_bits_from_float_to_uint16(f):
-    return struct.unpack('<I', struct.pack('<f', f))[0] >> 16
-
-
-def convert_float_to_uint16(float_list):
-    new_output = []
-    for first in float_list:
-        for second in first:
-                    new_output.append(np.uint16(copy_bits_from_float_to_uint16(second)))
-
-    return np.reshape(new_output, float_list.shape).view(np.uint16)
 
 
 class TestFusionGRUBF16MKLDNNOp(OpTest):
@@ -57,7 +44,7 @@ class TestFusionGRUBF16MKLDNNOp(OpTest):
 
         T = sum(self.lod[0])
         N = len(self.lod[0])
-        
+
         # fp32 X input for reference implementation and
         # corressponding bf16 data as input to GRU oneDNN bf16 kernel
         x_fp32 = np.random.rand(T, self.M).astype('float32')
@@ -71,17 +58,22 @@ class TestFusionGRUBF16MKLDNNOp(OpTest):
             1, 3 * self.D).astype('float32') if self.with_bias else np.zeros(
                 (1, 3 * self.D), dtype='float32')
 
-        h0_fp32 = np.random.rand(N, self.D).astype('float32') if self.with_h0 else np.zeros(
+        h0_fp32 = np.random.rand(
+            N, self.D).astype('float32') if self.with_h0 else np.zeros(
                 (N, self.D), dtype='float32')
 
-
         _, _, _, hidden = fusion_gru(
-            x_fp32, self.lod, h0_fp32, wx_fp32, wh_fp32, bias, self.is_reverse, self.origin_mode,
-            ACTIVATION[self.act_state], ACTIVATION[self.act_gate])
+            x_fp32, self.lod, h0_fp32, wx_fp32, wh_fp32, bias, self.is_reverse,
+            self.origin_mode, ACTIVATION[self.act_state],
+            ACTIVATION[self.act_gate])
 
-        hidden_bf16 =  convert_float_to_uint16(hidden)
+        hidden_bf16 = convert_float_to_uint16(hidden)
 
-        self.inputs = {'X': (x_bf16, self.lod), 'WeightX': wx_fp32, 'WeightH': wh_fp32}
+        self.inputs = {
+            'X': (x_bf16, self.lod),
+            'WeightX': wx_fp32,
+            'WeightH': wh_fp32
+        }
 
         if self.with_bias:
             self.inputs['Bias'] = bias
@@ -114,6 +106,7 @@ class TestFusionGRUINT8MKLDNNOp2(TestFusionGRUBF16MKLDNNOp):
 class TestFusionGRUINT8MKLDNNOp3(TestFusionGRUBF16MKLDNNOp):
     def set_confs(self):
         self.with_bias = False
+
 
 if __name__ == "__main__":
     unittest.main()

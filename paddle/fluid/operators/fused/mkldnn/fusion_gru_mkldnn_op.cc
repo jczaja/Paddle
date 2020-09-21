@@ -226,7 +226,8 @@ class GRUMKLDNNHandler : public platform::MKLDNNHandlerT<T, dnnl::gru_forward> {
   }
 
   // TODO(grygielski) H0 is for now persistable
-  // TODO(jczaja) H0 should be updated each iter and of T type (Fusion pass does not support in yet)
+  // TODO(jczaja) H0 should be updated each iter and of T type (Fusion pass does
+  // not support in yet)
   std::shared_ptr<dnnl::memory> AcquireH0Memory(const Tensor* h0) {
     const std::string h0_key = memory_key_ + "@h0";
     auto memory_p =
