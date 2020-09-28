@@ -64,7 +64,7 @@ TEST(test_pool2d_transpose_nhwc, cpu_place) {
   auto op_pool = framework::OpRegistry::CreateOp("pool2d", {{"X", {"x"}}}, {{"Out", {"y"}}},
                                      {{"use_mkldnn", {true}}});
   auto op_transpose = framework::OpRegistry::CreateOp("pool2d", {{"X", {"x"}}}, {{"Out", {"y"}}},
-                                     {{"use_mkldnn", {true}}});
+                                     {{"axis", {{0,2,3,1}}} ,{"use_mkldnn", {true}}});
 
   op_pool->Run(scope, p);
   pool.Get(p)->Wait();
