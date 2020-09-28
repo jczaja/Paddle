@@ -50,7 +50,7 @@ TEST(test_pool2d_transpose_nhwc, cpu_place) {
   std::mt19937 engine;
   size_t numel = static_cast<size_t>(framework::product(dims));
   input_name.tensor->Resize(dims);
-  auto data_ptr = input_name.tensor->mutable_data<float>(cpu_place);
+  auto data_ptr = input_name.tensor->mutable_data<float>(p);
   for (size_t i = 0; i < numel; ++i) {
     data_ptr[i] = dist(engine);
   }
@@ -66,8 +66,8 @@ TEST(test_pool2d_transpose_nhwc, cpu_place) {
   auto op_transpose = framework::OpRegistry::CreateOp("pool2d", {{"X", {"x"}}}, {{"Out", {"y"}}},
                                      {{"use_mkldnn", {true}}});
 
-  op_pool->Run(scope, place);
-  pool.Get(place)->Wait();
+  op_pool->Run(scope, p);
+  pool.Get(p)->Wait();
 
   // Verify shape of output
 
