@@ -62,8 +62,8 @@ TEST(test_pool2d_transpose_nhwc, cpu_place) {
   // Make pool2d followed by transpose   
 
   auto op_pool = framework::OpRegistry::CreateOp("pool2d", {{"X", {"x"}}}, {{"Out", {"y"}}},
-                                     {{"use_mkldnn", {true}}});
-  auto op_transpose = framework::OpRegistry::CreateOp("pool2d", {{"X", {"x"}}}, {{"Out", {"y"}}},
+                                     {{"data_format", {"NHWC"}},{"use_mkldnn", {true}}});
+  auto op_transpose = framework::OpRegistry::CreateOp("transpose", {{"X", {"x"}}}, {{"Out", {"y"}}},
                                      {{"axis", {{0,2,3,1}}} ,{"use_mkldnn", {true}}});
 
   op_pool->Run(scope, p);
