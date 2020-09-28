@@ -45,12 +45,12 @@ TEST(test_pool2d_transpose_nhwc, cpu_place) {
 
   InputVars input_name = {"x", scope.Var("x")->GetMutable<framework::LoDTensor>()};
   // Initialize input data
-  std::uniform_real_distribution<T> dist(static_cast<T>(10.0),
-                                         static_cast<T>(20.0));
+  std::uniform_real_distribution<float> dist(static_cast<float>(10.0),
+                                         static_cast<float>(20.0));
   std::mt19937 engine;
   size_t numel = static_cast<size_t>(framework::product(dims));
   input_name.tensor->Resize(dims);
-  auto data_ptr = input_name.tensor->mutable_data<float>(place);
+  auto data_ptr = input_name.tensor->mutable_data<float>(cpu_place);
   for (size_t i = 0; i < numel; ++i) {
     data_ptr[i] = dist(engine);
   }
@@ -62,6 +62,8 @@ TEST(test_pool2d_transpose_nhwc, cpu_place) {
   // Make pool2d followed by transpose   
 
   auto op_pool = framework::OpRegistry::CreateOp("pool2d", {{"X", {"x"}}}, {{"Out", {"y"}}},
+                                     {{"use_mkldnn", {true}}});
+  auto op_transpose = framework::OpRegistry::CreateOp("pool2d", {{"X", {"x"}}}, {{"Out", {"y"}}},
                                      {{"use_mkldnn", {true}}});
 
   op_pool->Run(scope, place);
