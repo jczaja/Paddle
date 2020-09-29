@@ -63,7 +63,7 @@ TEST(test_pool2d_transpose_nhwc, cpu_place) {
 
   auto ksize = std::vector<int>(2,2);
   auto op_pool = framework::OpRegistry::CreateOp("pool2d", {{"X", {"x"}}}, {{"Out", {"y"}}},
-                                     {{"pooling_type", {"max"}}, {"ksize",{ksize}},{"data_format", {"NHWC"}},{"use_mkldnn", {true}}});
+                                     {{"pooling_type", {std::string("max")}}, {"ksize",{ksize}},{"data_format", {std::string("NHWC")}},{"use_mkldnn", {true}}});
 
   auto axis = std::vector<int>(4,0);
   axis[1] = 2;
