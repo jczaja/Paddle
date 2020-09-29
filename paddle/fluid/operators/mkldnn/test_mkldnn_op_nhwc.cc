@@ -39,15 +39,16 @@ struct InputVars {
 };
 
 TEST(test_pool2d_transpose_nhwc, cpu_place) {
-  framework::DDim dims({1,4, 8, 512}); // NHWC shape
-  framework::DDim expected_dims({1,4, 8, 512}); // NHWC shape
+  framework::DDim dims({1, 4, 8, 512});           // NHWC shape
+  framework::DDim expected_dims({1, 7, 512, 3});  // NHWC expected shape
   platform::CPUPlace p;
   framework::Scope scope;
 
-  InputVars input_name = {"x", scope.Var("x")->GetMutable<framework::LoDTensor>()};
+  InputVars input_name = {"x",
+                          scope.Var("x")->GetMutable<framework::LoDTensor>()};
   // Initialize input data
   std::uniform_real_distribution<float> dist(static_cast<float>(10.0),
-                                         static_cast<float>(20.0));
+                                             static_cast<float>(20.0));
   std::mt19937 engine;
   size_t numel = static_cast<size_t>(framework::product(dims));
   input_name.tensor->Resize(dims);
@@ -60,30 +61,34 @@ TEST(test_pool2d_transpose_nhwc, cpu_place) {
   auto *z = scope.Var("z")->GetMutable<framework::LoDTensor>();
 
   auto &pool = platform::DeviceContextPool::Instance();
-  
-  // Make pool2d followed by transpose   
 
-  auto ksize = std::vector<int>(2,2);
-  auto op_pool = framework::OpRegistry::CreateOp("pool2d", {{"X", {"x"}}}, {{"Out", {"y"}}},
-                                     {{"pooling_type", {std::string("max")}}, {"ksize",{ksize}},{"data_format", {std::string("NHWC")}},{"use_mkldnn", {true}}});
+  // Make pool2d followed by transpose
 
-  auto axis = std::vector<int>(4,0);
+  auto ksize = std::vector<int>(2, 2);
+  auto op_pool = framework::OpRegistry::CreateOp(
+      "pool2d", {{"X", {"x"}}}, {{"Out", {"y"}}},
+      {{"pooling_type", {std::string("max")}},
+       {"ksize", {ksize}},
+       {"data_format", {std::string("NHWC")}},
+       {"use_mkldnn", {true}}});
+
+  auto axis = std::vector<int>(4, 0);
   axis[1] = 2;
   axis[2] = 3;
   axis[3] = 1;
-  auto op_transpose = framework::OpRegistry::CreateOp("transpose", {{"X", {"y"}}}, {{"Out", {"z"}}},
-                                     {{"axis", {axis}} ,{"use_mkldnn", {true}}});
+  auto op_transpose = framework::OpRegistry::CreateOp(
+      "transpose", {{"X", {"y"}}}, {{"Out", {"z"}}},
+      {{"axis", {axis}}, {"use_mkldnn", {true}}});
 
   op_pool->Run(scope, p);
   op_transpose->Run(scope, p);
   pool.Get(p)->Wait();
 
   // Verify shape of output
-  auto z_shape = z->dims();
-  
-  PADDLE_ENFORCE_EQ( z->dims(), expected_dims, platform::errors::InvalidArgument( "Computed shape does not match expected shape"));
+  PADDLE_ENFORCE_EQ(z->dims(), expected_dims,
+                    platform::errors::InvalidArgument(
+                        "Computed shape does not match expected shape"));
 }
-
 
 }  // namespace operators
 }  // namespace paddle
