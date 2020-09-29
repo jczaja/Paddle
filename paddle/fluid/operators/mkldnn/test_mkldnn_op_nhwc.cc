@@ -39,7 +39,8 @@ struct InputVars {
 };
 
 TEST(test_pool2d_transpose_nhwc, cpu_place) {
-  framework::DDim dims({1,512,32, 64});
+  framework::DDim dims({1,4, 8, 512}); // NHWC shape
+  framework::DDim expected_dims({1,4, 8, 512}); // NHWC shape
   platform::CPUPlace p;
   framework::Scope scope;
 
@@ -78,7 +79,9 @@ TEST(test_pool2d_transpose_nhwc, cpu_place) {
   pool.Get(p)->Wait();
 
   // Verify shape of output
-
+  auto z_shape = z->dims();
+  
+  PADDLE_ENFORCE_EQ( z->dims(), expected_dims, platform::errors::InvalidArgument( "Computed shape does not match expected shape"));
 }
 
 
