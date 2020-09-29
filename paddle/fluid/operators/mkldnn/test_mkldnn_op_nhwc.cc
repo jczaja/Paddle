@@ -56,6 +56,7 @@ TEST(test_pool2d_transpose_nhwc, cpu_place) {
   }
 
   auto *y = scope.Var("y")->GetMutable<framework::LoDTensor>();
+  auto *z = scope.Var("z")->GetMutable<framework::LoDTensor>();
 
   auto &pool = platform::DeviceContextPool::Instance();
   
@@ -69,10 +70,11 @@ TEST(test_pool2d_transpose_nhwc, cpu_place) {
   axis[1] = 2;
   axis[2] = 3;
   axis[3] = 1;
-  auto op_transpose = framework::OpRegistry::CreateOp("transpose", {{"X", {"x"}}}, {{"Out", {"y"}}},
+  auto op_transpose = framework::OpRegistry::CreateOp("transpose", {{"X", {"y"}}}, {{"Out", {"z"}}},
                                      {{"axis", {axis}} ,{"use_mkldnn", {true}}});
 
   op_pool->Run(scope, p);
+  op_transpose->Run(scope, p);
   pool.Get(p)->Wait();
 
   // Verify shape of output
