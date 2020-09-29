@@ -57,14 +57,8 @@ TEST(test_pool2d_transpose_nhwc, cpu_place) {
     data_ptr[i] = dist(engine);
   }
 
-  auto *y = scope.Var("y")->GetMutable<framework::LoDTensor>();
+  scope.Var("y")->GetMutable<framework::LoDTensor>();
   auto *z = scope.Var("z")->GetMutable<framework::LoDTensor>();
-  // Initialize output
-  y->Resize(dims);
-  auto y_ptr = y->mutable_data<T>(place);
-  for (size_t i = 0; i < numel; ++i) {
-    y_ptr[i] = static_cast<T>(0);
-  }
 
   auto &pool = platform::DeviceContextPool::Instance();
 
