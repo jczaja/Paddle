@@ -61,10 +61,16 @@ TEST(test_pool2d_transpose_nhwc, cpu_place) {
   
   // Make pool2d followed by transpose   
 
+  auto ksize = std::vector<int>(2,2);
   auto op_pool = framework::OpRegistry::CreateOp("pool2d", {{"X", {"x"}}}, {{"Out", {"y"}}},
-                                     {{"data_format", {"NHWC"}},{"use_mkldnn", {true}}});
+                                     {{"ksize",{ksize}},{"data_format", {"NHWC"}},{"use_mkldnn", {true}}});
+
+  auto axis = std::vector<int>(4,0);
+  axis[1] = 2;
+  axis[2] = 3;
+  axis[3] = 1;
   auto op_transpose = framework::OpRegistry::CreateOp("transpose", {{"X", {"x"}}}, {{"Out", {"y"}}},
-                                     {{"axis", {{0,2,3,1}}} ,{"use_mkldnn", {true}}});
+                                     {{"axis", {axis}} ,{"use_mkldnn", {true}}});
 
   op_pool->Run(scope, p);
   pool.Get(p)->Wait();
