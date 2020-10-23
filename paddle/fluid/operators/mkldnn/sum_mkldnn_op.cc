@@ -87,7 +87,7 @@ class SumMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
       }
 
       const T* input_data = input_it.data<T>();
-      MKLDNNMemoryFormat input_format = input_it->format();
+      MKLDNNMemoryFormat input_format = input_it.format();
 
       auto src_md = memory::desc(src_tz, memory::data_type::f32, input_format);
       auto src_mem = memory(src_md, mkldnn_engine, to_void_cast(input_data));
