@@ -179,8 +179,9 @@ class SumMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
           framework::vectorize(output->dims()), ctx.OutputName("Out") + "-I");
 
       auto& in_out = in_vars[0]->Get<framework::LoDTensor>();
+      auto output_tz = framework::vectorize<int64_t>(output->dims());
       platform::ReorderMKLDNNHandler reorder_handler(
-           framework::vectorize<int64_t>(output->dims()), output->type(), 
+           output_tz, output->type(), 
            framework::ToMKLDNNDataType(in_out.type()), dev_ctx, dev_ctx.GetEngine(),
            reorder_key);
 
