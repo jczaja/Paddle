@@ -174,11 +174,11 @@ class SumMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
     // so from oneDNN dst memory we reorder data into input
     if (in_place) {
       const std::string reorder_key = platform::CreateKey(
-          framework::vectorize(output->dims()), ctx.OutputName("Out") + "-I")
+          framework::vectorize(output->dims()), ctx.OutputName("Out") + "-I");
 
-          platform::ReorderMKLDNNHandler reorder_handler(
-              dst_mem->desc().dims(), output->type(), dst_mem->desc().type(),
-              *dev_ctx, dev_ctx.GetEngine());
+      platform::ReorderMKLDNNHandler reorder_handler(
+           dst_mem->desc().dims(), output->type(), dst_mem->desc().type(),
+           *dev_ctx, dev_ctx.GetEngine());
 
       auto& in_out = in_vars[0]->Get<framework::LoDTensor>();
       auto target_mem = handler.AcquireDstMemory(output, in_out->format());
