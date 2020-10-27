@@ -181,7 +181,7 @@ class SumMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
       auto& in_out = in_vars[0]->Get<framework::LoDTensor>();
       platform::ReorderMKLDNNHandler reorder_handler(
            framework::vectorize<int64_t>(output->dims()), output->type(), 
-           ToMKLDNNDataType(in_out.type()), dev_ctx, dev_ctx.GetEngine());
+           framework::ToMKLDNNDataType(in_out.type()), dev_ctx, dev_ctx.GetEngine());
 
       auto target_mem = handler.AcquireDstMemory(output, in_out.format());
 
