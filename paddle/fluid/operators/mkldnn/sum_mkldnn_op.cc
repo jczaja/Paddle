@@ -185,7 +185,7 @@ class SumMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
            dev_ctx, dev_ctx.GetEngine(), reorder_key);
 
       auto target_mem = reorder_handler.AcquireDstMemory(&output, in_out.format(),
-           dev_ctx.GetEngine());
+           ctx.GetPlace());
 
       auto reorder_p = reorder_handler.AcquireReorder(target_mem, dst_mem);
       reorder_p->execute(astream, *dst_mem, *target_mem);
