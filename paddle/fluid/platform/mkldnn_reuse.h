@@ -479,7 +479,6 @@ class MKLDNNHandler {
   std::string key_common_;
 };
 
-
 template <typename T>
 class BinaryMKLDNNHandler : public platform::MKLDNNHandlerT<T, dnnl::binary> {
  public:
@@ -579,8 +578,6 @@ class BinaryMKLDNNHandler : public platform::MKLDNNHandlerT<T, dnnl::binary> {
     return attributes;
   }
 };
-
-
 
 template <typename T>
 class ActivationMKLDNNHandler
