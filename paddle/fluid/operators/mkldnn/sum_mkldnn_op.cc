@@ -181,13 +181,12 @@ class SumMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
       auto& in_out = in_vars[0]->Get<framework::LoDTensor>();
       auto output_tz = framework::vectorize<int64_t>(output->dims());
       platform::ReorderMKLDNNHandler reorder_handler(
-           output_tz, output->type(), 
-           framework::ToMKLDNNDataType(in_out.type()), dev_ctx, dev_ctx.GetEngine(),
-           reorder_key);
+           output_tz, output->type(), framework::ToMKLDNNDataType(in_out.type()),
+           dev_ctx, dev_ctx.GetEngine(), reorder_key);
 
-      auto target_mem = handler.AcquireDstMemory(output, in_out.format());
+      auto target_mem = reorder_handler.AcquireDstMemory(output, in_out.format());
 
-      auto reorder_p = handler.AcquireReorder(target_mem, dst_mem);
+      auto reorder_p = reorder_handler.AcquireReorder(target_mem, dst_mem);
       reorder_p->execute(astream, *dst_mem, *target_mem);
       astream.wait();
     }
