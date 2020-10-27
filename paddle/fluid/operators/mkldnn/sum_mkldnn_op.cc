@@ -114,7 +114,7 @@ class SumMKLDNNHandler : public platform::MKLDNNHandlerT<T, dnnl::sum> {
   }
 
   std::shared_ptr<mkldnn::memory> AcquireDstMemory(void) {
-    return this->AcquireMemoryFromPrimitive(fwd_pd_->dst_desc(), "@dst_mem_p");
+    return this->AcquireMemoryFromPrimitive(this->fwd_pd_->dst_desc(), "@dst_mem_p");
   }
 
   inline int GetNumInputs(void) { return num_inputs_; }
