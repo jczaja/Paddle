@@ -178,11 +178,11 @@ class SumMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
       const std::string reorder_key = platform::CreateKey(
           framework::vectorize(output->dims()), ctx.OutputName("Out") + "-I");
 
+      auto& in_out = in_vars[0]->Get<framework::LoDTensor>();
       platform::ReorderMKLDNNHandler reorder_handler(
            framework::vectorize<int64_t>(output->dims()), output->type(), 
-           dst_mem->desc().type(), dev_ctx, dev_ctx.GetEngine());
+           ToMKLDNNDataType(in_out.type()), dev_ctx, dev_ctx.GetEngine());
 
-      auto& in_out = in_vars[0]->Get<framework::LoDTensor>();
       auto target_mem = handler.AcquireDstMemory(output, in_out.format());
 
       auto reorder_p = handler.AcquireReorder(target_mem, dst_mem);
