@@ -113,6 +113,8 @@ class SumMKLDNNHandler : public platform::MKLDNNHandlerT<T, dnnl::sum> {
                                             "@src_mem_p" + srcs_suffix_[i]);
   }
 
+  using platform::MKLDNNHandlerT<T, dnnl::sum>::AcquireDstMemory;
+
   std::shared_ptr<mkldnn::memory> AcquireDstMemory(void) {
     return this->AcquireMemoryFromPrimitive(this->fwd_pd_->dst_desc(), "@dst_mem_p");
   }
