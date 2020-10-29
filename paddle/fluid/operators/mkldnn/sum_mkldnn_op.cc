@@ -71,10 +71,10 @@ class SumMKLDNNHandler : public platform::MKLDNNHandlerT<T, dnnl::sum> {
       std::vector<memory::desc> srcs_md;
       for (size_t i = 0; i < in_vars.size(); i++) {
         auto& input_it = in_vars[i]->Get<framework::LoDTensor>();
-        srcs_suffix_.push_back(std::string("-") + std::to_string(i));
         if (input_it.numel() == 0) {
           continue;
         }
+        srcs_suffix_.push_back(std::string("-") + std::to_string(num_inputs_));
         MKLDNNMemoryFormat input_format = input_it.format();
         srcs_md.push_back(memory::desc(src_tz, platform::MKLDNNGetDataType<T>(),
                                        input_format));
