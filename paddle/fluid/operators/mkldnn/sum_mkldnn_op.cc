@@ -148,7 +148,7 @@ class SumMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
 
     // Create list of SRC MEMs
     std::vector<std::shared_ptr<mkldnn::memory>> srcs_mem;
-    srcs_mem.resize(handler.GetNumInputs());
+    srcs_mem.reserve(handler.GetNumInputs());
     int input_index = 0;
     for (size_t i = 0; i < in_vars.size(); i++) {
       auto& input_it = in_vars[i]->Get<framework::LoDTensor>();
