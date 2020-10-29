@@ -64,6 +64,11 @@ class SumMKLDNNHandler : public platform::MKLDNNHandlerT<T, dnnl::sum> {
             dev_ctx, dev_ctx.GetEngine(), cpu_place,
             platform::CreateKey(framework::vectorize(z->dims()), uniq_name)),
         num_inputs_(0) {
+
+    for (size_t i = 0; i < in_vars.size(); i++) {
+      srcs_suffix_.push_back(std::string("-") + std::to_string(i));
+    }
+
     if (!this->isCached()) {
       auto dst_tz = framework::vectorize<int64_t>(z->dims());
       auto src_tz = dst_tz;
@@ -74,7 +79,6 @@ class SumMKLDNNHandler : public platform::MKLDNNHandlerT<T, dnnl::sum> {
         if (input_it.numel() == 0) {
           continue;
         }
-        srcs_suffix_.push_back(std::string("-") + std::to_string(num_inputs_));
         MKLDNNMemoryFormat input_format = input_it.format();
         srcs_md.push_back(memory::desc(src_tz, platform::MKLDNNGetDataType<T>(),
                                        input_format));
