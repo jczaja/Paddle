@@ -154,7 +154,7 @@ void TensorAdd(const framework::Variable& src, framework::Variable* dst) {
   if (data_type == framework::DataTypeTrait<cpp_type>::DataType()) { \
     TensorAddFunctor<cpp_type> func(                                 \
         numel, src_tensor.data<cpp_type>(),                          \
-        dst_tensor->mutable_data<cpp_type>(place));                  \
+        dst_tensor->mutable_data<cpp_type>(place, src_tensor.memory_size()));  \
     boost::apply_visitor(func, place);                               \
     return;                                                          \
   }
