@@ -61,7 +61,7 @@ class EltwiseAddMKLDNNGradKernel : public ElemwiseGradKernel<T> {
     }
 
     if (dy) {
-      auto reorder_dst_memory_p = handler.AcquireDstMemory(dx, dout->format(), ctx.GetPlace());
+      auto reorder_dst_memory_p = handler.AcquireDstMemory(dy, dout->format(), ctx.GetPlace());
       auto reorder_p =
           handler.AcquireReorder(reorder_dst_memory_p, reorder_src_memory_p);
       platform::RecordEvent record_reorder("int_reorder",
