@@ -1060,7 +1060,9 @@ class ReorderMKLDNNHandler : public MKLDNNHandler {
       mem_p = std::make_shared<mkldnn::memory>(dst_md, engine_, dst_data);
       dev_ctx_.SetBlob(local_key, mem_p);
     } else {
-      auto dst_data = output->mutable_data(place, vtype_);
+      // Even if memory object exists , we may be using it for diffrent tensor
+      auto dst_data =
+          output->mutable_data(place, vtype_, mem_p->get_desc().get_size());
       mem_p->set_data_handle(dst_data);
     }
     return mem_p;
