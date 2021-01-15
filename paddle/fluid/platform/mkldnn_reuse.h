@@ -298,7 +298,7 @@ class MKLDNNHandlerT {
         dev_ctx_.GetBlob(local_key));
   }
 
-  const MKLDNNDeviceContext& dev_ctx_;
+  MKLDNNDeviceContext& dev_ctx_;
   mkldnn::engine engine_;
   platform::Place place_;
   std::string key_common_;
@@ -498,7 +498,7 @@ class MKLDNNHandler {
   }
 
  protected:
-  const MKLDNNDeviceContext& dev_ctx_;
+  MKLDNNDeviceContext& dev_ctx_;
   mkldnn::engine engine_;
   std::string key_common_;
   std::string key_;
