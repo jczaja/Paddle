@@ -451,13 +451,15 @@ Place CUDAPinnedDeviceContext::GetPlace() const { return place_; }
 
 #ifdef PADDLE_WITH_MKLDNN
 MKLDNNDeviceContext::MKLDNNDeviceContext(CPUPlace place)
-    : CPUDeviceContext(place), p_blobmap_() {
+    : CPUDeviceContext(place),
+      engine_(mkldnn::engine::kind::cpu, 0),
+      stream_(engine_),
+      p_blobmap_() {
   p_blobmap_.reset(new BlobMap());
   p_mutex_.reset(new std::mutex());
 }
 
-MKLDNNDeviceContextThreadLocals::Body::Body()
-    : cur_engine(mkldnn::engine::kind::cpu, 0), cur_stream(cur_engine) {
+MKLDNNDeviceContextThreadLocals::Body::Body() {
   cur_mkldnn_session_id = kMKLDNNSessionID_Default;
   cur_input_shape_str = "";
   cur_input_shape_cache_capacity = 1;
@@ -498,14 +500,6 @@ void MKLDNNDeviceContextThreadLocals::Body::log_lib_version(void) {
     LOG(INFO) << "oneDNN v" << dv->major << "." << dv->minor << "."
               << dv->patch;
   }
-}
-
-const mkldnn::engine& MKLDNNDeviceContextThreadLocals::Body::get_engine(void) {
-  return cur_engine;
-}
-
-mkldnn::stream& MKLDNNDeviceContextThreadLocals::Body::get_stream(void) {
-  return cur_stream;
 }
 
 void MKLDNNDeviceContext::ResetBlobMap() {

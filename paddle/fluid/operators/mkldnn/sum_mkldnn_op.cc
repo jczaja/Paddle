@@ -178,7 +178,7 @@ class SumMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
     }
     args.insert({MKLDNN_ARG_DST, *dst_mem});
 
-    auto& astream = platform::MKLDNNDeviceContext::tls().get_stream();
+    auto& astream = dev_ctx.GetStream();
     sum_p->execute(astream, args);
     astream.wait();
 

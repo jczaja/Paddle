@@ -242,7 +242,7 @@ class ConvTransposeMKLDNNOpKernel : public paddle::framework::OpKernel<T> {
 
     auto conv_p = handler.AcquireConvolution();
 
-    auto& astream = platform::MKLDNNDeviceContext::tls().get_stream();
+    auto& astream = dev_ctx.GetStream();
     if (bias) {
       const T* bias_data = bias->data<T>();
       auto user_bias_md = platform::MKLDNNMemDesc(

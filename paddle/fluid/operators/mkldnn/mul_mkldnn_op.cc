@@ -109,7 +109,7 @@ class MulPrimitiveFactory {
 
     auto reorder = mkldnn::reorder(reorder_pd);
 
-    auto &astream = platform::MKLDNNDeviceContext::tls().get_stream();
+    auto& astream = dev_ctx.GetStream();
     {
       platform::RecordEvent record_reorder("int_reorder",
                                            platform::EventRole::kUniqueOp);
@@ -184,7 +184,7 @@ class MulPrimitiveFactory {
   }
 
   void Execute() {
-    auto &astream = platform::MKLDNNDeviceContext::tls().get_stream();
+    auto& astream = dev_ctx.GetStream();
     (*mul_).execute(astream, {{MKLDNN_ARG_SRC, *x_input_},
                               {MKLDNN_ARG_WEIGHTS, *y_input_},
                               {MKLDNN_ARG_DST, *output_}});
@@ -270,7 +270,7 @@ class MulPrimitiveFactory {
 
     auto reorder = mkldnn::reorder(src_mem, dst_mem);
 
-    auto &astream = platform::MKLDNNDeviceContext::tls().get_stream();
+    auto& astream = dev_ctx.GetStream();
     {
       platform::RecordEvent record_reorder("int_reorder",
                                            platform::EventRole::kUniqueOp);
