@@ -292,7 +292,7 @@ class MultiGRUHandler {
 
     auto gru_forward_p0 = AcquireGruPrimitive(layer, dir);
 
-    auto& astream = dev_ctx.GetStream();
+    auto& astream = dev_ctx_.GetStream();
     gru_forward_p0->execute(astream, gru_args);
     astream.wait();
     return out_mem;
@@ -315,7 +315,7 @@ class MultiGRUHandler {
       memory_p = std::make_shared<dnnl::memory>(
           gru_pds_[{layer, dir}]->src_iter_desc(), engine_);
 
-      auto& astream = dev_ctx.GetStream();
+      auto& astream = dev_ctx_.GetStream();
       dnnl::reorder(user_h0_memory, *memory_p, attrs_[2 * layer + (dir == R2L)])
           .execute(astream, user_h0_memory, *memory_p);
 
@@ -354,7 +354,7 @@ class MultiGRUHandler {
       memory_p = std::make_shared<dnnl::memory>(
           gru_pds_[{layer, dir}]->weights_layer_desc(), engine_);
 
-      auto& astream = dev_ctx.GetStream();
+      auto& astream = dev_ctx_.GetStream();
       dnnl::reorder(user_memory, *memory_p, attrs_[2 * layer + (dir == R2L)])
           .execute(astream, user_memory, *memory_p);
 
@@ -517,7 +517,7 @@ class MultiGRUHandler {
 
     auto concat_p = AcquireConcatPrimitive(layer);
 
-    auto& astream = dev_ctx.GetStream();
+    auto& astream = dev_ctx_.GetStream();
     concat_p->execute(astream, concat_args);
     astream.wait();
     return out_mem;
