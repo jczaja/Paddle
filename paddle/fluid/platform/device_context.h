@@ -578,7 +578,7 @@ class MKLDNNDeviceContext : public CPUDeviceContext {
   /* \brief  Get the active engine */
   //const mkldnn::engine& GetEngine() const { return tls().get_engine(); }
   const mkldnn::engine& GetEngine() const { return engine_; }
-  mkldnn::stream& GetStream() const { return stream_; }
+  mkldnn::stream& GetStream() { return stream_; }
 
   // Remove all entries from the blob map
   void ResetBlobMap();
