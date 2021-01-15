@@ -193,7 +193,7 @@ void innerTransDataLayoutFromMKLDNN(DataLayout in_layout, DataLayout out_layout,
     auto reorder_p =
         handler.AcquireReorder(reorder_dst_memory_p, reorder_src_memory_p);
 
-    auto& astream = dev_ctx.GetStream();
+    auto& astream = dev_ctx->GetStream();
     platform::RecordEvent record_reorder("ext_reorder",
                                          platform::EventRole::kUniqueOp);
     reorder_p->execute(astream, *reorder_src_memory_p, *reorder_dst_memory_p);
