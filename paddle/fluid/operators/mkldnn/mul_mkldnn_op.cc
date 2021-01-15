@@ -44,7 +44,8 @@ template <typename XT, typename YT, typename OT>
 class MulPrimitiveFactory {
  public:
   explicit MulPrimitiveFactory(const mkldnn::engine &engine)
-      : engine_(engine) {}
+      : engine_(engine), stream_(mkldnn::stream(engine_)) {}
+    
 
   inner_product_forward CreateMulPrimitive(const Tensor *x_input,
                                            const Tensor *y_input,
@@ -109,12 +110,11 @@ class MulPrimitiveFactory {
 
     auto reorder = mkldnn::reorder(reorder_pd);
 
-    auto& astream = dev_ctx.GetStream();
     {
       platform::RecordEvent record_reorder("int_reorder",
                                            platform::EventRole::kUniqueOp);
-      reorder.execute(astream, src_mem, dst_mem);
-      astream.wait();
+      reorder.execute(stream_, src_mem, dst_mem);
+      stream_.wait();
     }
 
     return dst_mem;
@@ -184,11 +184,10 @@ class MulPrimitiveFactory {
   }
 
   void Execute() {
-    auto& astream = dev_ctx.GetStream();
-    (*mul_).execute(astream, {{MKLDNN_ARG_SRC, *x_input_},
+    (*mul_).execute(stream_, {{MKLDNN_ARG_SRC, *x_input_},
                               {MKLDNN_ARG_WEIGHTS, *y_input_},
                               {MKLDNN_ARG_DST, *output_}});
-    astream.wait();
+    stream_.wait();
   }
 
   template <typename T>
@@ -270,12 +269,11 @@ class MulPrimitiveFactory {
 
     auto reorder = mkldnn::reorder(src_mem, dst_mem);
 
-    auto& astream = dev_ctx.GetStream();
     {
       platform::RecordEvent record_reorder("int_reorder",
                                            platform::EventRole::kUniqueOp);
-      reorder.execute(astream, src_mem, dst_mem);
-      astream.wait();
+      reorder.execute(stream_, src_mem, dst_mem);
+      stream_.wait();
     }
 
     return dst_mem;
@@ -290,6 +288,7 @@ class MulPrimitiveFactory {
   }
 
   const mkldnn::engine &engine_;
+  mkldnn::stream &stream_;
   boost::optional<memory> x_input_;
   boost::optional<memory> y_input_;
   boost::optional<memory> output_;

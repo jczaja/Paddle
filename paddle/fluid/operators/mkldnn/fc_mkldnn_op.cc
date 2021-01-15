@@ -47,7 +47,7 @@ using mkldnn::prop_kind;
 template <typename T_in, typename T_w, typename T_out>
 class FCPrimitiveFactory {
  public:
-  explicit FCPrimitiveFactory(const mkldnn::engine& engine) : engine_(engine) {}
+  explicit FCPrimitiveFactory(const mkldnn::engine& engine) : engine_(engine),  stream_(mkldnn::stream(engine_)) {}
 
   void ExecuteFcPrimitive(const LoDTensor* input, const Tensor* weights,
                           const Tensor* bias, LoDTensor* output,
@@ -137,18 +137,17 @@ class FCPrimitiveFactory {
   }
 
   void Execute() {
-    auto& astream = dev_ctx.GetStream();
     if (bias_) {
-      fc_->execute(astream, {{MKLDNN_ARG_SRC, *input_},
+      fc_->execute(stream_, {{MKLDNN_ARG_SRC, *input_},
                              {MKLDNN_ARG_WEIGHTS, *weights_},
                              {MKLDNN_ARG_BIAS, *bias_},
                              {MKLDNN_ARG_DST, *output_}});
     } else {
-      fc_->execute(astream, {{MKLDNN_ARG_SRC, *input_},
+      fc_->execute(stream_, {{MKLDNN_ARG_SRC, *input_},
                              {MKLDNN_ARG_WEIGHTS, *weights_},
                              {MKLDNN_ARG_DST, *output_}});
     }
-    astream.wait();
+    stream_.wait();
   }
 
  private:
@@ -280,13 +279,12 @@ class FCPrimitiveFactory {
     auto dst_mem = std::make_shared<memory>(dst_desc, engine_);
 
     auto reorder = mkldnn::reorder(src_mem, *dst_mem);
-    auto& astream = dev_ctx.GetStream();
 
     {
       platform::RecordEvent record_reorder("int_reorder",
                                            platform::EventRole::kUniqueOp);
-      reorder.execute(astream, src_mem, *dst_mem);
-      astream.wait();
+      reorder.execute(stream_, src_mem, *dst_mem);
+      stream_.wait();
     }
 
     return dst_mem;
@@ -309,13 +307,12 @@ class FCPrimitiveFactory {
     attributes.set_output_scales(mask, scale_data);
     auto reorder = mkldnn::reorder(*src_mem, *dst_mem, attributes);
 
-    auto& astream = dev_ctx.GetStream();
     {
       platform::RecordEvent record_reorder("int_reorder",
                                            platform::EventRole::kUniqueOp);
-      reorder.execute(astream,
+      reorder.execute(stream_,
                       {{MKLDNN_ARG_FROM, *src_mem}, {MKLDNN_ARG_TO, *dst_mem}});
-      astream.wait();
+      stream_.wait();
     }
 
     return dst_mem;
@@ -539,6 +536,7 @@ class FCPrimitiveFactory {
 
  private:
   const mkldnn::engine& engine_;
+  mkldnn::stream& stream_;
   boost::optional<memory> input_;
   boost::optional<memory> output_;
   std::shared_ptr<memory> bias_;
