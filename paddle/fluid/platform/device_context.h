@@ -612,7 +612,7 @@ class MKLDNNDeviceContext : public CPUDeviceContext {
 
  private:
   mkldnn::engine engine_;
-  mkldnn::engine stream_;
+  mkldnn::stream stream_;
   std::shared_ptr<BlobMap> p_blobmap_;
   std::shared_ptr<std::mutex> p_mutex_;
   bool block_next_cache_clearing_ = false;
