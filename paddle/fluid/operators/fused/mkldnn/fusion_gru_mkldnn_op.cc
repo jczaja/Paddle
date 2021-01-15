@@ -411,8 +411,6 @@ class FusionGRUMKLDNNKernel : public framework::OpKernel<T> {
         ctx.template device_context<platform::MKLDNNDeviceContext>();
     const auto& mkldnn_engine = dev_ctx.GetEngine();
 
-    dev_ctx.dddd();
-
     // Get Tensors
     const auto* input = ctx.Input<LoDTensor>("X");
     const auto* h0 = ctx.Input<Tensor>("H0");
