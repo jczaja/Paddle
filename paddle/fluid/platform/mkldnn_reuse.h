@@ -37,7 +37,7 @@ template <typename T, typename TForward,
           typename TBackward = mkldnn_dummy_primitive>
 class MKLDNNHandlerT {
  public:
-  MKLDNNHandlerT(const MKLDNNDeviceContext& dev_ctx, mkldnn::engine engine,
+  MKLDNNHandlerT(MKLDNNDeviceContext& dev_ctx, mkldnn::engine engine,
                  platform::Place cpu_place, const std::string& base_key)
       : dev_ctx_(dev_ctx),
         engine_(engine),
@@ -310,7 +310,7 @@ class MKLDNNHandlerT {
 // TODO(grygielski) this class will be deleted later.
 class MKLDNNHandler {
  public:
-  MKLDNNHandler(const MKLDNNDeviceContext& dev_ctx, mkldnn::engine engine,
+  MKLDNNHandler(MKLDNNDeviceContext& dev_ctx, mkldnn::engine engine,
                 const std::string& base_key)
       : dev_ctx_(dev_ctx),
         engine_(engine),
