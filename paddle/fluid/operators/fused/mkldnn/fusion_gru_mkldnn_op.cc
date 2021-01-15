@@ -406,7 +406,7 @@ class FusionGRUMKLDNNKernel : public framework::OpKernel<T> {
   }
 
   template <typename Tout = T>
-  void RunKernel(const framework::ExecutionContext& ctx) const {
+  void RunKernel(const framework::ExecutionContext& ctx) {
     auto& dev_ctx =
         ctx.template device_context<platform::MKLDNNDeviceContext>();
     const auto& mkldnn_engine = dev_ctx.GetEngine();
