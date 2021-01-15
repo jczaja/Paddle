@@ -34,7 +34,7 @@ template <typename T, dnnl::algorithm BINARY_OP>
 class EltwiseMKLDNNKernel : public framework::OpKernel<T> {
  public:
   void Compute(const framework::ExecutionContext& ctx) const override {
-    const auto& dev_ctx =
+    auto& dev_ctx =
         ctx.template device_context<paddle::platform::MKLDNNDeviceContext>();
     const auto& mkldnn_engine = dev_ctx.GetEngine();
 
