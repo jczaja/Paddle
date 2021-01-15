@@ -508,7 +508,7 @@ template <typename T>
 class BinaryMKLDNNHandler : public platform::MKLDNNHandlerT<T, dnnl::binary> {
  public:
   BinaryMKLDNNHandler(const dnnl::algorithm algo, const int axis,
-                      const MKLDNNDeviceContext& dev_ctx,
+                      MKLDNNDeviceContext& dev_ctx,
                       const mkldnn::engine engine, platform::Place cpu_place,
                       const Tensor* x, const Tensor* y, Tensor* z,
                       float scale_x, float scale_y, float scale_z,
@@ -612,7 +612,7 @@ class ActivationMKLDNNHandler
   ActivationMKLDNNHandler(const std::vector<int64_t>& dims,
                           mkldnn::algorithm algorithm, float alpha, float beta,
                           const MKLDNNMemoryFormat fmt,
-                          const platform::MKLDNNDeviceContext& dev_ctx,
+                          platform::MKLDNNDeviceContext& dev_ctx,
                           platform::Place cpu_place,
                           const std::string& unique_name)
 
@@ -630,7 +630,7 @@ class ActivationMKLDNNHandler
                           mkldnn::algorithm algorithm, float alpha, float beta,
                           const MKLDNNMemoryFormat fmt,
                           const MKLDNNMemoryFormat diff_fmt,
-                          const platform::MKLDNNDeviceContext& dev_ctx,
+                          platform::MKLDNNDeviceContext& dev_ctx,
                           platform::Place cpu_place,
                           const std::string& unique_name)
 
@@ -661,7 +661,7 @@ class LRNMKLDNNHandler
     : public MKLDNNHandlerT<T, mkldnn::lrn_forward, mkldnn::lrn_backward> {
  public:
   LRNMKLDNNHandler(const paddle::framework::ExecutionContext& ctx,
-                   const platform::MKLDNNDeviceContext& dev_ctx,
+                   platform::MKLDNNDeviceContext& dev_ctx,
                    const mkldnn::engine mkldnn_engine,
                    platform::Place cpu_place, const Tensor* input,
                    const std::string& unique_name)
@@ -699,7 +699,7 @@ class LRNMKLDNNHandler
                    const float alpha, const float beta, const float k,
                    const MKLDNNMemoryFormat fmt,
                    const MKLDNNMemoryFormat diff_fmt,
-                   const platform::MKLDNNDeviceContext& dev_ctx,
+                   platform::MKLDNNDeviceContext& dev_ctx,
                    platform::Place cpu_place, const std::string& unique_name)
 
       : platform::MKLDNNHandlerT<T, mkldnn::lrn_forward, mkldnn::lrn_backward>(
@@ -737,7 +737,7 @@ class PoolingMKLDNNHandler : public MKLDNNHandlerT<T, mkldnn::pooling_forward,
                                                    mkldnn::pooling_backward> {
  public:
   PoolingMKLDNNHandler(const paddle::framework::ExecutionContext& ctx,
-                       const MKLDNNDeviceContext& dev_ctx,
+                       MKLDNNDeviceContext& dev_ctx,
                        const mkldnn::engine mkldnn_engine,
                        platform::Place cpu_place, const Tensor* input,
                        Tensor* output, const std::string& unique_name)
@@ -848,7 +848,7 @@ class PoolingMKLDNNHandler : public MKLDNNHandlerT<T, mkldnn::pooling_forward,
       const std::vector<int64_t>& paddings, const std::string& pooling_type,
       bool ceil_mode, const MKLDNNMemoryFormat fmt,
       const MKLDNNMemoryFormat diff_dst_fmt, mkldnn::memory::data_type dt,
-      const platform::MKLDNNDeviceContext& dev_ctx, platform::Place cpu_place,
+      platform::MKLDNNDeviceContext& dev_ctx, platform::Place cpu_place,
       const std::string& unique_name, bool exclude_padding)
       : platform::MKLDNNHandlerT<T, mkldnn::pooling_forward,
                                  mkldnn::pooling_backward>(
@@ -941,7 +941,7 @@ class TransposeMKLDNNHandler : public MKLDNNHandler {
  public:
   TransposeMKLDNNHandler(std::vector<int64_t>& dims,  // NOLINT
                          std::vector<int>& axis,      // NOLINT
-                         const platform::MKLDNNDeviceContext& dev_ctx,
+                         platform::MKLDNNDeviceContext& dev_ctx,
                          mkldnn::engine engine, const std::string& base_key)
       : platform::MKLDNNHandler(dev_ctx, engine, base_key),
         dims_(dims),
@@ -1034,7 +1034,7 @@ class ReorderMKLDNNHandler : public MKLDNNHandler {
   ReorderMKLDNNHandler(std::vector<int64_t>& dims,  // NOLINT
                        framework::proto::VarType::Type vtype,
                        mkldnn::memory::data_type dtype,
-                       const platform::MKLDNNDeviceContext& dev_ctx,
+                       platform::MKLDNNDeviceContext& dev_ctx,
                        mkldnn::engine engine, const std::string& base_key)
       : platform::MKLDNNHandler(dev_ctx, engine, base_key),
         dims_(dims),
@@ -1104,14 +1104,14 @@ struct convolutional_algorithm<mkldnn::deconvolution_forward> {
 template <class forward_t, class backward_data_t, class backward_weights_t>
 class ConvMKLDNNTemplateHandler : public MKLDNNHandler {
  public:
-  ConvMKLDNNTemplateHandler(const platform::MKLDNNDeviceContext& dev_ctx,
+  ConvMKLDNNTemplateHandler(platform::MKLDNNDeviceContext& dev_ctx,
                             mkldnn::engine engine, const std::string& base_key)
       : platform::MKLDNNHandler(dev_ctx, engine, base_key) {}
 
   // TODO(jczaja): remove after conv int8 is adapted
   ConvMKLDNNTemplateHandler(
       std::shared_ptr<typename forward_t::primitive_desc> conv_pd,
-      const platform::MKLDNNDeviceContext& dev_ctx, mkldnn::engine engine,
+      platform::MKLDNNDeviceContext& dev_ctx, mkldnn::engine engine,
       const std::string& base_key)
       : platform::MKLDNNHandler(dev_ctx, engine, base_key) {
     conv_pd_ = conv_pd;
@@ -1123,7 +1123,7 @@ class ConvMKLDNNTemplateHandler : public MKLDNNHandler {
           conv_bwd_data_pd,
       std::shared_ptr<typename backward_weights_t::primitive_desc>
           conv_bwd_weights_pd,
-      const platform::MKLDNNDeviceContext& dev_ctx, mkldnn::engine engine,
+      platform::MKLDNNDeviceContext& dev_ctx, mkldnn::engine engine,
       const std::string& base_key)
       : platform::MKLDNNHandler(dev_ctx, engine, base_key),
         conv_pd_(conv_pd),
