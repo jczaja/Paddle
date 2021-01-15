@@ -30,7 +30,7 @@ template <typename T, typename T_out = T>
 class GRUMKLDNNHandler : public platform::MKLDNNHandlerT<T, dnnl::gru_forward> {
  public:
   GRUMKLDNNHandler(const paddle::framework::ExecutionContext& ctx,
-                   const platform::MKLDNNDeviceContext& dev_ctx,
+                   platform::MKLDNNDeviceContext& dev_ctx,
                    const mkldnn::engine mkldnn_engine,
                    platform::Place cpu_place, const LoDTensor* input,
                    const Tensor* weight_h, const Tensor* h0,
