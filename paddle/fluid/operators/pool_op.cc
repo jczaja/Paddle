@@ -156,8 +156,18 @@ framework::OpKernelType PoolOp::GetExpectedKernelType(
   }
 #endif
 #ifdef PADDLE_WITH_MKLDNN
+  auto CanMKLDNNSupportPool =
+      [](const framework::ExecutionContext& ctx) -> bool {
+    if (ctx.Attr<bool>("adaptive") == false) return true;
+    // (jczaja): oneDNN is supporting only unchangable in size pool window
+    auto src_tz = paddle::framework::vectorize(ctx.Input<Tensor>("X")->dims());
+    std::vector<int> ksize = ctx.Attr<std::vector<int>>("ksize");
+    return src_tz[src_tz.size() - 1] % ksize[1] == 0 &&
+           src_tz[src_tz.size() - 2] % ksize[0] == 0;
+  };
+
   if (library_ == framework::LibraryType::kPlain &&
-      this->CanMKLDNNBeUsed(ctx)) {
+      this->CanMKLDNNBeUsed(ctx) && CanMKLDNNSupportPool(ctx)) {
     library_ = framework::LibraryType::kMKLDNN;
     layout_ = framework::DataLayout::kMKLDNN;
   }
