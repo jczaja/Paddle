@@ -144,8 +144,7 @@ void PoolOp::InferShape(framework::InferShapeContext* ctx) const {
   ctx->ShareLoD("X", "Out");
 }
 
-bool CanMKLDNNSupportPool(
-    const framework::ExecutionContext& ctx) {
+bool CanMKLDNNSupportPool(const framework::ExecutionContext& ctx) {
   if (ctx.Attr<bool>("adaptive") == false) return true;
   // (jczaja): oneDNN is supporting only unchangable in size pool window
   auto src_tz = paddle::framework::vectorize(ctx.Input<Tensor>("X")->dims());
