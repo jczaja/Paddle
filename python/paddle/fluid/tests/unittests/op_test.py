@@ -1356,6 +1356,7 @@ class OpTest(unittest.TestCase):
                               user_defined_grad_outputs=None,
                               check_dygraph=True):
         self.scope = core.Scope()
+        #TODO(jczaja) make fp32 using 
         op_inputs = self.inputs if hasattr(self, "inputs") else dict()
         op_outputs = self.outputs if hasattr(self, "outputs") else dict()
         op_attrs = self.attrs if hasattr(self, "attrs") else dict()

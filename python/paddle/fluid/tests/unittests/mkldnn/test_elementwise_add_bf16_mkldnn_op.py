@@ -34,8 +34,13 @@ class TestElementwiseAddBf16MklDNNOp(OpTest):
             'X': convert_float_to_uint16(self.x),
             'Y': convert_float_to_uint16(self.y)
         }
+        self.inputs_fp32 = {
+            'X': self.x,
+            'Y': self.y
+        }
         self.attrs = {'axis': self.axis, 'use_mkldnn': self.use_mkldnn}
         self.outputs = {'Out': convert_float_to_uint16(self.out)}
+        self.outputs_fp32 = {'Out': self.out}
 
     def generate_data(self):
         self.x = np.random.random(100, ).astype(np.float32)
@@ -45,15 +50,8 @@ class TestElementwiseAddBf16MklDNNOp(OpTest):
     def test_check_output(self):
         self.check_output_with_place(core.CPUPlace())
 
-    def test_check_grad_normal(self):
-        pass
-
-    def test_check_grad_ingore_x(self):
-        pass
-
-    def test_check_grad_ingore_y(self):
-        pass
-
+    def test_check_grad(self):
+        self.check_grad(["X"], "Out", max_relative_error=0.01, check_dygraph=False)           
 
 if __name__ == '__main__':
     enable_static()
