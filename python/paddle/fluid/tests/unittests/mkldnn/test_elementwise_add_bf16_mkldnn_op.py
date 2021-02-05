@@ -46,7 +46,7 @@ class TestElementwiseAddBf16MklDNNOp(OpTest):
         self.check_output_with_place(core.CPUPlace())
 
     def test_check_grad_normal(self):
-        pass
+        self.check_grad(["X"], "Out", max_relative_error=0.01, check_dygraph=False, user_defined_grads=[self.x], user_defined_grad_outputs=[self.x])           
 
     def test_check_grad_ingore_x(self):
         pass
