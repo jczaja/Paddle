@@ -57,6 +57,21 @@ class TestMKLDNNElementwiseAddOp4(TestMKLDNNElementwiseAddOp):
     def test_check_grad_ingore_y(self):
         pass
 
+class TestMKLDNNElementwiseAddOp5(TestMKLDNNElementwiseAddOp):
+    def init_input_output(self):
+        self.x = np.random.uniform(1, 2, [12, 144]).astype(self.dtype)
+        self.y = np.random.uniform(1, 2, [1]).astype(self.dtype)
+        self.out = np.add(self.x, self.y)
+
+    # TODO(jczaja): Enable when grad is ready
+    def test_check_grad_normal(self):
+        pass
+
+    def test_check_grad_ingore_x(self):
+        pass
+
+    def test_check_grad_ingore_y(self):
+        pass
 
 class TestMKLDNNElementwiseAddOp_broadcast_3(TestMKLDNNElementwiseAddOp):
     def init_input_output(self):
