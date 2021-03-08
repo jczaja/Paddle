@@ -71,5 +71,4 @@ REGISTER_OP_KERNEL(
     ops::EltwiseMKLDNNKernel<uint8_t, dnnl::algorithm::binary_add>)
 
 REGISTER_OP_KERNEL(elementwise_add_grad, MKLDNN, ::paddle::platform::CPUPlace,
-                   ops::EltwiseAddMKLDNNGradKernel<paddle::platform::bfloat16>,
                    ops::EltwiseAddMKLDNNGradKernel<float>)
