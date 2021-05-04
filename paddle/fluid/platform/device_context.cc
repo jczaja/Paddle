@@ -626,7 +626,6 @@ void MKLDNNDeviceContext::ResetBlobMapInner(void* ptr) const {
 }
 
 void MKLDNNDeviceContext::ResetBlobMap(void* ptr) {
-  std::lock_guard<decltype(*p_mutex_)> lock(*p_mutex_);
   if (!block_next_cache_clearing_) {
     ResetBlobMapInner(ptr);
   } else {
