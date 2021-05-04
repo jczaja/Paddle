@@ -740,6 +740,7 @@ class MKLDNNDeviceContext : public CPUDeviceContext {
 
   // Remove all entries from the blob map
   void ResetBlobMap(void* ptr);
+  void ResetBlobMapInner(void* ptr) const;
 
   // Prevent next ResetBlobMap()
   void BlockNextCacheClearing();

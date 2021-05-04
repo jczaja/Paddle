@@ -605,24 +605,30 @@ const mkldnn::engine& MKLDNNDeviceContextThreadLocals::Body::get_engine(void) {
 }
 
 mkldnn::stream& MKLDNNDeviceContextThreadLocals::Body::get_stream(void) {
+  VLOG(3) << "TLS get_stream(): " << &cur_stream;
   return cur_stream;
+}
+
+void MKLDNNDeviceContext::ResetBlobMapInner(void* ptr) const {
+  std::lock_guard<decltype(*p_mutex_)> lock(*p_mutex_);
+  VLOG(3) << "Clearing DNNL cache.";
+  // If no specific executor pointer then clear
+  // everything. For executor pointer then clear only
+  // objects allocated when using given executor
+  if (ptr == nullptr) {
+    p_blobmap_->clear();
+  } else {
+    for (auto& v : (*p_exec_items_)[ptr]) {
+      (v.first)->erase(v.second);
+    }
+    p_exec_items_->erase(ptr);
+  }
 }
 
 void MKLDNNDeviceContext::ResetBlobMap(void* ptr) {
   std::lock_guard<decltype(*p_mutex_)> lock(*p_mutex_);
   if (!block_next_cache_clearing_) {
-    VLOG(3) << "Clearing DNNL cache.";
-    // If no specific executor pointer then clear
-    // everything. For executor pointer then clear only
-    // objects allocated when using given executor
-    if (ptr == nullptr) {
-      p_blobmap_->clear();
-    } else {
-      for (auto& v : (*p_exec_items_)[ptr]) {
-        (v.first)->erase(v.second);
-      }
-      p_exec_items_->erase(ptr);
-    }
+    ResetBlobMapInner(ptr);
   } else {
     VLOG(3) << "Prevented Clearing DNNL cache.";
     block_next_cache_clearing_ = false;

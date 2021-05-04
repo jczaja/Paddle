@@ -457,6 +457,9 @@ inline void AttachPointerHashToMKLDNNKey(void* ptr,
     paddle::platform::MKLDNNDeviceContext::tls().set_curr_exec(ptr);
 
     // For first thread
+
+    VLOG(3) << "AttachPointerHashToMKLDNNKey  This Thread :" << ThreadIDasStr()
+            << " First_Thread: " << first_thread;
     if (first_thread == ThreadIDasStr()) {
       paddle::platform::MKLDNNDeviceContext::tls().disable_tid_in_key();
     }

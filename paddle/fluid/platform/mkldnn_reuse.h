@@ -118,12 +118,23 @@ class MKLDNNHandlerT {
 
  protected:
   bool isCached() {
-    const std::string key_pd = key_common_ + "@fwd_pd";
-    fwd_pd_ = std::static_pointer_cast<typename TForward::primitive_desc>(
-        dev_ctx_.GetBlob(key_pd));
-
     const std::string key_p = key_ + "@fwd_p";
-    return (dev_ctx_.GetBlob(key_p) != nullptr);
+    if (dev_ctx_.GetBlob(key_p) != nullptr) {
+      // In that case all is cached and running
+      return true;
+    } else {
+      // If no prim then no cached data
+      // we need to clear PD as it maybe from
+      // other threads
+      const std::string key_pd = key_common_ + "@fwd_pd";
+      if (dev_ctx_.GetBlob(key_pd)) {
+        VLOG(3) << "Clearing cache for executor: "
+                << platform::MKLDNNDeviceContext::tls().get_curr_exec();
+        dev_ctx_.ResetBlobMapInner(
+            platform::MKLDNNDeviceContext::tls().get_curr_exec());
+      }
+      return false;
+    }
   }
 
   bool isBwdCached() {
