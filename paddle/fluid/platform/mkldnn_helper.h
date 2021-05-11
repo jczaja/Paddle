@@ -437,8 +437,7 @@ inline void AppendKey(std::string* key, const std::vector<T>& dims) {
 }
 
 // If MKLDNN build and CPU place then register suffix in DeviceContext
-inline void AttachPointerHashToMKLDNNKey(void* ptr,
-                                         const platform::Place& place) {
+inline void AttachPointerHashToMKLDNNKey(void* ptr, const platform::Place& place, bool single_threaded_executor) {
   if (platform::is_cpu_place(place)) {
     // Static vars will remember first executor and its thread
     // so both of them need to be processed by the same thread within
@@ -448,6 +447,9 @@ inline void AttachPointerHashToMKLDNNKey(void* ptr,
     static auto first_exec = ptr;
     static auto first_thread = ThreadIDasStr();
     static_vars_barrier.unlock();
+
+    // Mark if this thread is running single threaded_executors (executor, naive executor)
+    paddle::platform::MKLDNNDeviceContext::tls().toggle_single_threaded_executor(single_threaded_executor);
 
     if (first_exec != ptr) {
       paddle::platform::MKLDNNDeviceContext::tls().set_key_suffix(

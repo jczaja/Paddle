@@ -170,7 +170,7 @@ void Executor::Run(const ProgramDesc& pdesc, Scope* scope, int block_id,
   platform::RecordBlock b(block_id);
   if (FLAGS_use_mkldnn) EnableMKLDNN(pdesc);
 #ifdef PADDLE_WITH_MKLDNN
-  platform::AttachPointerHashToMKLDNNKey(this, place_);
+  platform::AttachPointerHashToMKLDNNKey(this, place_, true);
 #endif
   auto ctx = Prepare(pdesc, block_id, skip_ref_cnt_vars, force_disable_gc);
   RunPreparedContext(ctx.get(), scope, create_local_scope, create_vars,
@@ -298,7 +298,7 @@ void Executor::Run(const ProgramDesc& program, Scope* scope,
   platform::RecordBlock b(kProgramId);
   if (FLAGS_use_mkldnn) EnableMKLDNN(program);
 #ifdef PADDLE_WITH_MKLDNN
-  platform::AttachPointerHashToMKLDNNKey(this, place_);
+  platform::AttachPointerHashToMKLDNNKey(this, place_, true);
 #endif
   bool has_feed_ops =
       has_feed_operators(program.Block(0), *feed_targets, feed_holder_name);

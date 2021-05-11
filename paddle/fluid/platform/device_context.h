@@ -674,6 +674,7 @@ class MKLDNNDeviceContextThreadLocals {
     std::string key_suffix;  // Key identifying current Executor
     bool key_attach_thread_id = true;
     void* exec_ptr_ = nullptr;
+    bool single_threaded_executor_ = false;
 
     Body();
     ~Body();
@@ -692,6 +693,8 @@ class MKLDNNDeviceContextThreadLocals {
     bool is_tid_used_in_key(void) const { return key_attach_thread_id; }
     void set_curr_exec(void* exec_ptr) { exec_ptr_ = exec_ptr; }
     void* get_curr_exec(void) const { return exec_ptr_; }
+    void toggle_single_threaded_executor(bool is_single_threaded_executor) {return single_threaded_executor_ = is_single_threaded_executor; }
+    bool is_single_threaded_executor(void) const {return single_threaded_executor_; }
   };
   MKLDNNDeviceContextThreadLocals() = default;
   MKLDNNDeviceContextThreadLocals(const MKLDNNDeviceContextThreadLocals& c) =
