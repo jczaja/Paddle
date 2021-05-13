@@ -59,7 +59,7 @@ class SoftmaxMKLDNNHandler
                         : platform::CreateKey(
                               dev_ctx, framework::vectorize(input->dims()),
                               uniq_name)) {
-    if (!this->isCached()) {
+    if (!this->isCachedNonBlocking()) {
       PADDLE_ENFORCE_EQ(
           input->dims(), output->dims(),
           platform::errors::InvalidArgument(
@@ -69,7 +69,7 @@ class SoftmaxMKLDNNHandler
       auto md = memory::desc(softmax_tz, platform::MKLDNNGetDataType<T>(),
                              input->format());
 
-      this->AcquireForwardPrimitiveDescriptor(prop_kind::forward_scoring, md,
+      this->AcquireForwardPrimitiveDescriptorNonBlocking(prop_kind::forward_scoring, md,
                                               axis);
     }
   }
@@ -99,7 +99,9 @@ class SoftmaxMKLDNNHandler
       auto diff_softmax_md = platform::MKLDNNMemDesc(
           softmax_tz, platform::MKLDNNGetDataType<T>(), out_grad->format());
 
-      this->AcquireBackwardPrimitiveDescriptor(diff_softmax_md, data_softmax_md,
+      this->AcquireForwardPrimitiveDescriptorNonBlocking(prop_kind::forward_scoring, data_softmax_md,
+                                              axis);
+      this->AcquireBackwardPrimitiveDescriptorNonBlocking(diff_softmax_md, data_softmax_md,
                                                axis);
     }
   }

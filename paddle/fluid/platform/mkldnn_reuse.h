@@ -126,13 +126,20 @@ class MKLDNNHandlerT {
     return (dev_ctx_.GetBlob(key_p) != nullptr);
   }
 
+  bool isCachedNonBlocking() {
+    const std::string key_pd = key_ + "@fwd_pd";
+    fwd_pd_ = std::static_pointer_cast<typename TForward::primitive_desc>(
+        dev_ctx_.GetBlob(key_pd));
+
+    return (fwd_pd_ != nullptr);
+  }
+
   bool isBwdCached() {
-    const std::string key_pd = key_common_ + "@bwd_pd";
+    const std::string key_pd = key_ + "@bwd_pd";
     bwd_pd_ = std::static_pointer_cast<typename TBackward::primitive_desc>(
         dev_ctx_.GetBlob(key_pd));
 
-    const std::string key_p = key_ + "@bwd_p";
-    return (dev_ctx_.GetBlob(key_p) != nullptr);
+    return (bwd_pd_ != nullptr);
   }
 
   // If your primitive descriptor requires attributes, pass them as a
@@ -161,6 +168,20 @@ class MKLDNNHandlerT {
     }
   }
 
+  template <typename Arg, typename... Args>
+  void AcquireForwardPrimitiveDescriptorNonBlocking(Arg&& first_arg, Args&&... args) {
+    // This is used when we can recreate FWD PD in BWD so
+    // we do not need to pass FWD to BWD
+    const std::string key_pd = key_ + "@fwd_pd";
+    fwd_pd_ = std::static_pointer_cast<typename TForward::primitive_desc>(
+        dev_ctx_.GetBlob(key_pd));
+    if (fwd_pd_ == nullptr) {
+      CreateForwardPrimitiveDescriptor(first_arg,
+                                       std::forward<Args>(args)...);
+      dev_ctx_.SetBlob(key_pd, fwd_pd_);
+    }
+  }
+
   // Using sfinae to specialise variadic function. Workaround for not having
   // if constexpr in C++ 11.
   template <class First, class... Args>
@@ -182,6 +203,8 @@ class MKLDNNHandlerT {
         std::make_shared<typename TForward::primitive_desc>(fwd_desc, engine_);
   }
 
+  // TODO(jczaja): After/if all ops can used xxxNonBlocking version
+  // then remove this one
   template <typename... Args>
   void AcquireBackwardPrimitiveDescriptor(Args&&... args) {
     const std::string key_fwd_pd = key_common_ + "@fwd_pd";
@@ -190,6 +213,24 @@ class MKLDNNHandlerT {
     PADDLE_ENFORCE_NOT_NULL(
         fwd_pd_, platform::errors::Unavailable(
                      "Get MKLDNN Forward primitive %s failed.", key_fwd_pd));
+    const std::string key_pd = key_ + "@bwd_pd";
+    bwd_pd_ = std::static_pointer_cast<typename TBackward::primitive_desc>(
+        dev_ctx_.GetBlob(key_pd));
+    if (bwd_pd_ == nullptr) {
+      auto bwd_desc = typename TBackward::desc(std::forward<Args>(args)...);
+      bwd_pd_ = std::make_shared<typename TBackward::primitive_desc>(
+          bwd_desc, engine_, *fwd_pd_);
+      dev_ctx_.SetBlob(key_pd, bwd_pd_);
+    }
+  }
+
+  template <typename... Args>
+  void AcquireBackwardPrimitiveDescriptorNonBlocking(Args&&... args) {
+    // fwd_pd_ is set during grad by calling 
+    // AcquireForwardPrimitiveDescriptorNonBlocking
+    PADDLE_ENFORCE_NOT_NULL(
+        fwd_pd_, platform::errors::Unavailable(
+                     "Get MKLDNN Forward primitive %s failed.", key_ + "@fwd_pd"));
     const std::string key_pd = key_ + "@bwd_pd";
     bwd_pd_ = std::static_pointer_cast<typename TBackward::primitive_desc>(
         dev_ctx_.GetBlob(key_pd));
