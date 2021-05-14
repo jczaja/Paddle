@@ -228,7 +228,7 @@ class PoolingMKLDNNHandler
           src_md, dst_md, strides, ksize, mkldnn_paddings[0],
           mkldnn_paddings[1]);
 
-      this->AcquireBackwardPrimitiveDescriptor(
+      this->AcquireBackwardPrimitiveDescriptorNonBlocking(
           pooling_type == "max"
               ? mkldnn::algorithm::pooling_max
               : (exclude_padding
