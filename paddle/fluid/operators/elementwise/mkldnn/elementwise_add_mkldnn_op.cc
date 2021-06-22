@@ -43,10 +43,7 @@ class EltwiseAddMKLDNNGradKernel : public ElemwiseGradKernel<T> {
 
     auto tz = paddle::framework::vectorize<int64_t>(dout->dims());
     memory::data_type dout_type = framework::ToMKLDNNDataType(dout->type());
-    std::string key = platform::CreateKey(dev_ctx, tz, dout->format(),
-                                          dout->format(), dout_type);
-    platform::ReorderMKLDNNHandler handler(tz, dout->type(), dout_type, dev_ctx,
-                                           onednn_engine, key);
+    platform::ReorderMKLDNNHandler handler(tz, dout_type, onednn_engine);
 
     auto& astream = platform::MKLDNNDeviceContext::tls().get_stream();
     auto reorder_src_memory_p = handler.AcquireSrcMemory(
@@ -54,11 +51,9 @@ class EltwiseAddMKLDNNGradKernel : public ElemwiseGradKernel<T> {
 
     if (dx) {
       auto reorder_dst_memory_p =
-          handler.AcquireDstMemory(dx, dout->format(), ctx.GetPlace());
+          handler.AcquireDstMemory(dx, dout->type(), dout->format(), ctx.GetPlace());
       auto reorder_p =
           handler.AcquireReorder(reorder_dst_memory_p, reorder_src_memory_p);
-      platform::RecordEvent record_reorder("int_reorder",
-                                           platform::EventRole::kUniqueOp);
       reorder_p->execute(astream, *reorder_src_memory_p, *reorder_dst_memory_p);
       astream.wait();
 
@@ -70,11 +65,9 @@ class EltwiseAddMKLDNNGradKernel : public ElemwiseGradKernel<T> {
       // Direct copy
       if (dout->dims() == dy->dims()) {
         auto reorder_dst_memory_p =
-            handler.AcquireDstMemory(dy, dout->format(), ctx.GetPlace());
+            handler.AcquireDstMemory(dy, dout->type(), dout->format(), ctx.GetPlace());
         auto reorder_p =
             handler.AcquireReorder(reorder_dst_memory_p, reorder_src_memory_p);
-        platform::RecordEvent record_reorder("int_reorder",
-                                             platform::EventRole::kUniqueOp);
         reorder_p->execute(astream, *reorder_src_memory_p,
                            *reorder_dst_memory_p);
         astream.wait();

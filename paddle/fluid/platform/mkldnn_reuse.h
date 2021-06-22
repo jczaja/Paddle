@@ -898,72 +898,42 @@ class ActivationMKLDNNHandler
 };
 
 template <typename T>
-class TransposeMKLDNNHandler : public MKLDNNHandler {
+class TransposeMKLDNNHandler {
  public:
   TransposeMKLDNNHandler(std::vector<int64_t>& dims,  // NOLINT
                          std::vector<int>& axis,      // NOLINT
-                         const platform::MKLDNNDeviceContext& dev_ctx,
-                         mkldnn::engine engine, const std::string& base_key)
-      : platform::MKLDNNHandler(dev_ctx, engine, base_key),
-        dims_(dims),
+                         mkldnn::engine engine)
+      : dims_(dims),
         axis_(axis),
-        logical_axis_(dims.size(), 0) {}
+        logical_axis_(dims.size(), 0),
+        engine_(engine) {}
 
   std::shared_ptr<mkldnn::memory> AcquireSrcMemory(
       const MKLDNNMemoryFormat& fmt, void* ptr) {
-    auto local_key = key_ + "@user_src_mem_p";
-    auto mem_p =
-        std::static_pointer_cast<mkldnn::memory>(dev_ctx_.GetBlob(local_key));
-    if (mem_p == nullptr) {
       // Make memory descriptor using input format, unless it
       // cannot be trusted (nchw) then make up memory fmt manually
-      for (size_t i = 0; i < logical_axis_.size(); ++i) {
-        logical_axis_[i] = i;
+      for (size_t i = 0; i < this->logical_axis_.size(); ++i) {
+        this->logical_axis_[i] = i;
       }
 
       auto src_md = fmt != MKLDNNMemoryFormat::nchw
                         ? platform::MKLDNNMemDesc(
                               dims_, platform::MKLDNNGetDataType<T>(), fmt)
-                        : Axis2MemoryDesc(dims_, logical_axis_);
-      mem_p = std::make_shared<mkldnn::memory>(src_md, engine_, ptr);
-      dev_ctx_.SetBlob(local_key, mem_p);
-    } else {
-      mem_p->set_data_handle(ptr);
-    }
-    return mem_p;
+                        : Axis2MemoryDesc(dims_, this->logical_axis_);
+      return std::make_shared<mkldnn::memory>(src_md, engine_, ptr);
   }
 
   std::shared_ptr<mkldnn::memory> AcquireDstMemory(framework::Tensor* output,
                                                    platform::Place place) {
-    auto local_key = key_ + "@user_dst_mem_p";
-    auto mem_p =
-        std::static_pointer_cast<mkldnn::memory>(dev_ctx_.GetBlob(local_key));
-    if (mem_p == nullptr) {
-      auto dst_md = Axis2MemoryDesc(dims_, axis_);
-
-      auto dst_data = output->mutable_data<T>(place, dst_md.get_size());
-
-      mem_p = std::make_shared<mkldnn::memory>(dst_md, engine_, dst_data);
-      dev_ctx_.SetBlob(local_key, mem_p);
-    } else {
-      auto dst_data = output->mutable_data<T>(place);
-      mem_p->set_data_handle(dst_data);
-    }
-    return mem_p;
+    auto dst_md = Axis2MemoryDesc(dims_, axis_);
+    auto dst_data = output->mutable_data<T>(place, dst_md.get_size());
+    return std::make_shared<mkldnn::memory>(dst_md, engine_, dst_data);
   }
 
   std::shared_ptr<mkldnn::reorder> AcquireTranspose(
       std::shared_ptr<mkldnn::memory> dst_memory_p,
       std::shared_ptr<mkldnn::memory> src_memory_p) {
-    auto prim_key = key_ + "@transpose_p";
-    auto transpose_p =
-        std::static_pointer_cast<mkldnn::reorder>(dev_ctx_.GetBlob(prim_key));
-    if (transpose_p == nullptr) {
-      transpose_p =
-          std::make_shared<mkldnn::reorder>(*(src_memory_p), *(dst_memory_p));
-      dev_ctx_.SetBlob(prim_key, transpose_p);
-    }
-    return transpose_p;
+      return std::make_shared<mkldnn::reorder>(*(src_memory_p), *(dst_memory_p));
   }
 
  protected:
@@ -988,81 +958,52 @@ class TransposeMKLDNNHandler : public MKLDNNHandler {
   std::vector<int64_t> dims_;
   std::vector<int> axis_;
   std::vector<int> logical_axis_;
+  mkldnn::engine engine_;
 };
 
-class ReorderMKLDNNHandler : public MKLDNNHandler {
+class ReorderMKLDNNHandler {
  public:
   ReorderMKLDNNHandler(std::vector<int64_t>& dims,  // NOLINT
-                       framework::proto::VarType::Type vtype,
                        mkldnn::memory::data_type dtype,
-                       const platform::MKLDNNDeviceContext& dev_ctx,
-                       mkldnn::engine engine, const std::string& base_key)
-      : platform::MKLDNNHandler(dev_ctx, engine, base_key),
-        dims_(dims),
-        vtype_(vtype),
-        vtype_dst_(vtype),
+                       mkldnn::engine engine)
+      : dims_(dims),
         dtype_(dtype),
-        dtype_dst_(dtype) {}
+        dtype_dst_(dtype),
+        engine_(engine) {}
 
   ReorderMKLDNNHandler(std::vector<int64_t>& dims,  // NOLINT
-                       framework::proto::VarType::Type vtype,
                        mkldnn::memory::data_type dtype,
-                       framework::proto::VarType::Type vtype_dst,
                        mkldnn::memory::data_type dtype_dst,
-                       const platform::MKLDNNDeviceContext& dev_ctx,
-                       mkldnn::engine engine, const std::string& base_key)
-      : platform::MKLDNNHandler(dev_ctx, engine, base_key),
-        dims_(dims),
-        vtype_(vtype),
-        vtype_dst_(vtype_dst),
+                       mkldnn::engine engine)
+      : dims_(dims),
         dtype_(dtype),
-        dtype_dst_(dtype_dst) {}
+        dtype_dst_(dtype_dst),
+        engine_(engine) {}
 
-  std::shared_ptr<mkldnn::memory> AcquireSrcMemory(
+  inline std::shared_ptr<mkldnn::memory> AcquireSrcMemory(
       const MKLDNNMemoryFormat& fmt, void* ptr) {
-    return this->AcquireMemory(dims_, dtype_, fmt, ptr, "@user_src_mem_p");
+      auto md = mkldnn::memory::desc(this->dims_, this->dtype_, fmt);
+      return std::make_shared<mkldnn::memory>(md, engine_, ptr);
   }
 
   std::shared_ptr<mkldnn::memory> AcquireDstMemory(
-      framework::Tensor* output, const MKLDNNMemoryFormat& fmt,
-      platform::Place place) {
-    auto local_key = key_ + "@user_dst_mem_p";
-    auto mem_p =
-        std::static_pointer_cast<mkldnn::memory>(dev_ctx_.GetBlob(local_key));
-    if (mem_p == nullptr) {
-      auto dst_md = platform::MKLDNNMemDesc(dims_, dtype_dst_, fmt);
+      framework::Tensor* output, const framework::proto::VarType::Type dst_vtype, const MKLDNNMemoryFormat& dst_fmt, platform::Place place) {
+      auto dst_md = platform::MKLDNNMemDesc(dims_, dtype_dst_, dst_fmt);
       auto dst_data =
-          output->mutable_data(place, vtype_dst_, dst_md.get_size());
-
-      mem_p = std::make_shared<mkldnn::memory>(dst_md, engine_, dst_data);
-      dev_ctx_.SetBlob(local_key, mem_p);
-    } else {
-      // Even if memory object exists , we may be using it for diffrent tensor
-      auto dst_data =
-          output->mutable_data(place, vtype_dst_, mem_p->get_desc().get_size());
-      mem_p->set_data_handle(dst_data);
-    }
-    return mem_p;
+          output->mutable_data(place, dst_vtype, dst_md.get_size());
+    return std::make_shared<mkldnn::memory>(dst_md, engine_, dst_data);
   }
 
-  std::shared_ptr<mkldnn::reorder> AcquireReorder(
+  inline std::shared_ptr<mkldnn::reorder> AcquireReorder(
       std::shared_ptr<mkldnn::memory> dst_memory_p,
       std::shared_ptr<mkldnn::memory> src_memory_p) {
-    auto prim_key = key_ + "@reorder_p";
-    auto reorder_p =
-        std::static_pointer_cast<mkldnn::reorder>(dev_ctx_.GetBlob(prim_key));
-    if (reorder_p == nullptr) {
-      reorder_p =
-          std::make_shared<mkldnn::reorder>(*(src_memory_p), *(dst_memory_p));
-      dev_ctx_.SetBlob(prim_key, reorder_p);
-    }
-    return reorder_p;
+      return std::make_shared<mkldnn::reorder>(*(src_memory_p), *(dst_memory_p));
   }
 
  private:
   std::vector<int64_t> dims_;
-  framework::proto::VarType::Type vtype_, vtype_dst_;
   mkldnn::memory::data_type dtype_, dtype_dst_;
+  mkldnn::engine engine_;
 };
 
 template <typename T>
@@ -1384,11 +1325,6 @@ using ConvMKLDNNHandler =
     ConvMKLDNNTemplateHandler<mkldnn::convolution_forward,
                               mkldnn::convolution_backward_data,
                               mkldnn::convolution_backward_weights>;
-
-using ConvTransposeMKLDNNHandler =
-    ConvMKLDNNTemplateHandler<mkldnn::deconvolution_forward,
-                              mkldnn::deconvolution_backward_data,
-                              mkldnn::deconvolution_backward_weights>;
 
 template <typename T>
 static std::shared_ptr<mkldnn::memory> SetDstMemory(
