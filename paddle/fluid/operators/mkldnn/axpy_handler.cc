@@ -34,50 +34,31 @@ namespace plat = paddle::platform;
 namespace {
 
 template <typename T>
-class AXPYMKLDNNHandler : public plat::MKLDNNHandlerT<T, dnnl::reorder> {
+class AXPYMKLDNNHandler {
  public:
-  AXPYMKLDNNHandler(const plat::MKLDNNDeviceContext &dev_ctx,
-                    const dnnl::engine mkldnn_engine, plat::Place cpu_place,
-                    int n, float alpha)
-      : plat::MKLDNNHandlerT<T, dnnl::reorder>(
-            dev_ctx, mkldnn_engine, cpu_place,
-            plat::CreateKey(dev_ctx, static_cast<int64_t>(n),
-                            plat::MKLDNNGetDataType<T>(), alpha, "-axpy")),
+  AXPYMKLDNNHandler(const dnnl::engine mkldnn_engine, plat::Place cpu_place, int n, float alpha)
+      : 
         alpha_(alpha),
-        n_(n) {}
+        n_(n),
+        engine_(mkldnn_engine) {}
 
-  std::shared_ptr<dnnl::memory> AcquireMemory(void *ptr,
-                                              const std::string &suffix) {
-    /*Generate key*/
-    auto local_key = this->key_ + suffix;
-    auto mem_p = std::static_pointer_cast<dnnl::memory>(
-        this->dev_ctx_.GetBlob(local_key));
-    if (mem_p == nullptr) {
+  std::shared_ptr<dnnl::memory> AcquireMemory(void *ptr) {
       auto md = dnnl::memory::desc({n_}, plat::MKLDNNGetDataType<T>(),
                                    dnnl::memory::format_tag::x);
-      mem_p = std::make_shared<dnnl::memory>(md, this->engine_, ptr);
-      this->dev_ctx_.SetBlob(local_key, mem_p);
-    } else {
-      mem_p->set_data_handle(ptr);
-    }
-    return mem_p;
+     return std::make_shared<dnnl::memory>(md, this->engine_, ptr);
   }
 
-  std::shared_ptr<dnnl::memory> AcquireSrcMemory(const T *x) {
-    return this->AcquireMemory(plat::to_void_cast(x), "@user_src_mem_p");
+  inline std::shared_ptr<dnnl::memory> AcquireSrcMemory(const T *x) {
+    return this->AcquireMemory(plat::to_void_cast(x));
   }
 
-  std::shared_ptr<dnnl::memory> AcquireDstMemory(T *y) {
-    return this->AcquireMemory(y, "@user_dst_mem_p");
+  inline std::shared_ptr<dnnl::memory> AcquireDstMemory(T *y) {
+    return this->AcquireMemory(y);
   }
 
   std::shared_ptr<dnnl::reorder> AcquireReorder(
       std::shared_ptr<dnnl::memory> dst_memory_p,
       std::shared_ptr<dnnl::memory> src_memory_p) {
-    auto prim_key = this->key_ + "@reorder_p";
-    auto reorder_p = std::static_pointer_cast<dnnl::reorder>(
-        this->dev_ctx_.GetBlob(prim_key));
-    if (reorder_p == nullptr) {
       // Here we pass Postops to mimick y -> a*X + y
       dnnl::primitive_attr reorder_attr;
       dnnl::post_ops post_operations;
@@ -88,16 +69,13 @@ class AXPYMKLDNNHandler : public plat::MKLDNNHandlerT<T, dnnl::reorder> {
       post_operations.append_sum(1.0f);
 
       reorder_attr.set_post_ops(post_operations);
-      reorder_p = std::make_shared<dnnl::reorder>(
-          *(src_memory_p), *(dst_memory_p), reorder_attr);
-      this->dev_ctx_.SetBlob(prim_key, reorder_p);
-    }
-    return reorder_p;
+      return std::make_shared<dnnl::reorder>(*(src_memory_p), *(dst_memory_p), reorder_attr);
   }
 
  private:
   float alpha_;
   int n_;
+  mkldnn::engine engine_;
 };
 
 template class AXPYMKLDNNHandler<float>;
@@ -128,8 +106,7 @@ void onednn_handler_axpy(int n, T alpha, const T *x, T *y) {
       dynamic_cast<plat::MKLDNNDeviceContext *>(pool.Get(cpu_place));
   auto &cpu_engine = dev_ctx->GetEngine();
 
-  AXPYMKLDNNHandler<T> handler(*dev_ctx, cpu_engine, cpu_place, n,
-                               static_cast<float>(alpha));
+  AXPYMKLDNNHandler<T> handler(cpu_engine, cpu_place, n, static_cast<float>(alpha));
 
   auto reorder_src_memory_p = handler.AcquireSrcMemory(x);
   auto reorder_dst_memory_p = handler.AcquireDstMemory(y);
@@ -137,8 +114,6 @@ void onednn_handler_axpy(int n, T alpha, const T *x, T *y) {
       handler.AcquireReorder(reorder_dst_memory_p, reorder_src_memory_p);
 
   auto &astream = plat::MKLDNNDeviceContext::tls().get_stream();
-  plat::RecordEvent record_reorder("axpy_int_reorder",
-                                   plat::EventRole::kUniqueOp);
   reorder_p->execute(astream, *reorder_src_memory_p, *reorder_dst_memory_p);
   astream.wait();
 }
