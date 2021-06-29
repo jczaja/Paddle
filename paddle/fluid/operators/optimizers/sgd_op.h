@@ -93,6 +93,46 @@ struct sgd_dense_param_kernel<
   }
 };
 
+template <>
+struct sgd_dense_param_kernel<
+    float, framework::VarTypeTrait<framework::SelectedRows>::kId> {
+  void operator()(const framework::ExecutionContext &ctx) const {
+    VLOG(4) << "[CPU]: sgd_dense_param_kernel<float, SelectedRows>";
+    const auto *learning_rate = ctx.Input<framework::Tensor>("LearningRate");
+    auto *param_out = ctx.Output<framework::Tensor>("ParamOut");
+    const auto *grad = ctx.Input<framework::SelectedRows>("Grad");
+
+    const auto &grad_value = grad->value();
+    const auto &grad_rows = grad->rows();
+    const auto grad_height = grad->height();
+    const int64_t grad_val_height = static_cast<int64_t>(grad_rows.size());
+    const auto grad_width = grad_value.numel() / grad_val_height;
+
+    const auto *grad_data = grad_value.data<float>();
+    auto *out_data = param_out->data<float>();
+    const auto *lr = learning_rate->data<float>();
+
+    for (size_t i = 0; i < grad_rows.size(); ++i) {
+      PADDLE_ENFORCE_LT(
+          grad_rows[i], grad_height,
+          platform::errors::OutOfRange(
+              "Grad rows index value should be less than grad height."
+              "Got [%s], but expected less than [%s]",
+              grad_rows[i], grad_height));
+      const int64_t row = grad_rows[i];
+#ifdef PADDLE_WITH_MKLDNN
+      operators::onednn_handler_axpy(grad_width, -lr[0],
+                                     grad_data + i * grad_width,
+                                     out_data + row * grad_width);
+#else
+      for (int64_t j = 0; j < grad_width; ++j) {
+        out_data[row * grad_width + j] -= lr[0] * grad_data[i * grad_width + j];
+      }
+#endif
+    }
+  }
+};
+
 // LodTensor
 template <>
 struct sgd_dense_param_kernel<
